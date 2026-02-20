@@ -1,65 +1,79 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from "react";
+import Menu from "@/components/Menu";
 
 export default function Home() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="relative w-full h-screen overflow-hidden bg-neutral-200">
+      <Menu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      
+      {/* Background Image Layer */}
+      <div 
+        className="absolute inset-0 z-0 grayscale"
+        style={{
+          backgroundImage: "url('/architectural-concrete-monument.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundColor: '#d4d4d4'
+        }}
+      />
+
+      {/* Top Navigation */}
+      <header className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start md:top-6 md:left-6 md:right-6 lg:top-8 lg:left-8 lg:right-8">
+        {/* Brand Name */}
+        <div className="text-sm font-sans tracking-[2px] text-black font-medium uppercase">
+          NISCHAY
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {/* Center Logo */}
+        <div className="text-black">
+          <svg 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 12v-4" />
+            <path d="M12 12l-2-2" />
+            <path d="M12 12l2-2" />
+            <path d="M8 18h8" />
+          </svg>
         </div>
-      </main>
+
+        {/* Menu Toggle */}
+        <button 
+          onClick={() => setIsMenuOpen(true)}
+          className="text-sm font-sans bg-transparent border-none text-black cursor-pointer hover:opacity-70 transition-opacity uppercase tracking-[1px]"
+        >
+          + Menu
+        </button>
+      </header>
+
+      {/* Hero Content */}
+      <section className="absolute top-0 left-0 w-full h-full z-5 flex justify-center items-center pointer-events-none">
+        <h1 
+          className="font-serif text-[#E57373] text-center uppercase tracking-[0.05em] leading-[1.1] mix-blend-multiply"
+          style={{ fontSize: "clamp(3rem, 5vw, 6rem)" }}
+        >
+          For Downtime<br />
+          &amp; Inspiration
+        </h1>
+      </section>
+
+      {/* Footer / Scroll Indicator */}
+      <footer className="absolute bottom-6 w-full flex justify-center z-10">
+        <div className="text-[10px] font-sans tracking-[2px] text-[#333333] uppercase">
+          Scroll to read magazine
+        </div>
+      </footer>
     </div>
   );
 }
