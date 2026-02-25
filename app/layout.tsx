@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Poppins, Playfair_Display } from "next/font/google";
-import "./globals.css";
+import "../styles/globals.scss";
 
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 const playfair = Playfair_Display({

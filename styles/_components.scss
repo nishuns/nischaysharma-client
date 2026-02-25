@@ -1,0 +1,108 @@
+// Buttons
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: $radius-pill;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  @include transition(background-color, color, box-shadow);
+
+  &--primary {
+    background-color: $color-text-primary;
+    color: $color-white;
+    border: 1px solid $color-text-primary;
+
+    &:hover {
+      background-color: $color-black;
+      box-shadow: $shadow-premium;
+    }
+  }
+
+  &--secondary {
+    background-color: $color-bg-secondary;
+    color: $color-text-primary;
+    border: 1px solid $color-border;
+    box-shadow: $shadow-premium;
+
+    &:hover {
+      background-color: $color-bg-primary;
+    }
+  }
+
+  &--ghost {
+    color: $color-text-secondary;
+    padding: 0.5rem 1rem;
+
+    &:hover {
+      background-color: $color-bg-tertiary;
+      color: $color-text-primary;
+    }
+  }
+
+  &--full {
+    width: 100%;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+// Cards
+.card {
+  background-color: $color-bg-secondary;
+  border-radius: $radius-lg;
+  border: 1px solid $color-border;
+  box-shadow: $shadow-premium;
+  overflow: hidden;
+  
+  &--padded {
+    padding: $spacing-lg;
+  }
+
+  &--dark {
+    background-color: $color-text-primary;
+    color: $color-white;
+    border-color: transparent;
+  }
+  
+  &--transparent {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+// Badge
+.badge {
+  display: inline-flex;
+  padding: 0.25rem 0.75rem;
+  border-radius: $radius-md;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &--published {
+    background-color: $color-bg-secondary;
+    color: $color-text-primary;
+    border: 1px solid $color-border;
+  }
+
+  &--draft {
+    background-color: $color-bg-tertiary;
+    color: $color-text-secondary;
+    border: 1px solid transparent;
+  }
+
+  &--review {
+    background-color: $color-bg-secondary;
+    color: $color-text-secondary;
+    border: 1px dashed $color-border;
+  }
+}
