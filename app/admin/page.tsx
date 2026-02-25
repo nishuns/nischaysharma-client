@@ -18,35 +18,39 @@ const Card = ({
   variant?: "light" | "dark" | "glass" | "accent"
 }) => {
   const variants = {
-    light: "bg-white shadow-soft text-text-primary border border-white/40",
-    dark: "bg-bg-card-dark text-white",
-    glass: "bg-white/40 backdrop-blur-xl border border-white/40 shadow-soft text-text-primary",
-    accent: "bg-accent-yellow-light text-text-primary border border-accent-yellow/20"
+    light: "bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)] text-text-primary border border-black/[0.03]",
+    dark: "bg-bg-card-dark text-white shadow-xl",
+    glass: "bg-white/60 backdrop-blur-xl border border-white/40 shadow-soft text-text-primary",
+    accent: "bg-accent-yellow-light/50 text-text-primary border border-accent-yellow/20"
   };
 
   return (
-    <div className={`rounded-[24px] p-8 transition-all duration-500 ${variants[variant]} ${className}`}>
+    <div className={`rounded-[28px] p-8 transition-all duration-500 ${variants[variant]} ${className}`}>
       {children}
     </div>
   );
 };
 
-const NavPill = ({ children, active = false }: { children: React.ReactNode, active?: boolean }) => (
-  <button className={`px-6 py-2.5 rounded-full text-sm font-semibold tracking-tight transition-all duration-300 ${
-    active 
-      ? 'bg-bg-card-dark text-white shadow-lg scale-105' 
-      : 'text-text-secondary hover:text-text-primary hover:bg-white/50'
+const NavItem = ({ children, active = false }: { children: React.ReactNode, active?: boolean }) => (
+  <button className={`relative px-1 py-2 text-sm font-bold tracking-tight transition-all duration-300 ${
+    active ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
   }`}>
     {children}
+    {active && (
+      <motion.div 
+        layoutId="navUnderline"
+        className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-yellow"
+      />
+    )}
   </button>
 );
 
 const StatBadge = ({ label, value, trend }: { label: string, value: string, trend?: string }) => (
-  <div className="flex flex-col gap-1 pr-10 border-r border-divider last:border-0">
-    <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-text-secondary mb-1">{label}</span>
+  <div className="flex flex-col gap-1 pr-12 last:pr-0 border-r border-black/[0.05] last:border-0">
+    <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-text-secondary/60">{label}</span>
     <div className="flex items-baseline gap-2">
-      <span className="text-3xl font-bold tracking-tight text-text-primary">{value}</span>
-      {trend && <span className="text-[10px] font-bold text-emerald-500">{trend}</span>}
+      <span className="text-4xl font-bold tracking-tight text-text-primary">{value}</span>
+      {trend && <span className="text-[11px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">{trend}</span>}
     </div>
   </div>
 );
@@ -74,151 +78,167 @@ export default function AdminDashboard() {
   if (loading) return null;
 
   return (
-    <div className="min-h-screen bg-bg-global p-6 md:p-10 flex items-center justify-center">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-[1440px] min-h-[85vh] rounded-[32px] overflow-hidden flex flex-col p-10 md:p-14 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.15)] relative border border-white/20"
-        style={{ background: 'linear-gradient(135deg, #fefaf3 0%, #fbedcc 100%)' }}
-      >
-        {/* Navigation */}
-        <header className="flex items-center justify-between mb-16">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-bg-card-dark rounded-2xl flex items-center justify-center shadow-lg transform -rotate-6">
-              <span className="text-accent-yellow font-serif text-2xl font-bold">T</span>
+    <div className="min-h-screen w-full flex flex-col p-6 md:p-12 lg:p-16 max-w-[1600px] mx-auto">
+      {/* Navigation - Clean & Modern */}
+      <header className="flex items-center justify-between mb-20">
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-bg-card-dark rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-accent-yellow font-serif text-xl font-bold">T</span>
             </div>
-            <div>
-              <h2 className="font-serif text-xl font-bold tracking-tight text-text-primary">TaughtCode</h2>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary opacity-60">Admin Portal</p>
-            </div>
+            <h2 className="font-serif text-2xl font-bold tracking-tight text-text-primary">TaughtCode</h2>
           </div>
 
-          <nav className="hidden lg:flex bg-white/40 backdrop-blur-md p-1.5 rounded-full border border-white/40 shadow-sm">
-            {['Overview', 'Articles', 'Students', 'Templates', 'Reports'].map((tab, i) => (
-              <NavPill key={tab} active={i === 0}>{tab}</NavPill>
+          <nav className="hidden md:flex items-center gap-8">
+            {['Overview', 'Articles', 'Students', 'Templates'].map((tab, i) => (
+              <NavItem key={tab} active={i === 0}>{tab}</NavItem>
             ))}
           </nav>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right mr-2 hidden sm:block">
-              <p className="text-sm font-bold text-text-primary leading-none">{user?.displayName || 'Administrator'}</p>
-              <p className="text-[10px] font-medium text-text-secondary mt-1">{user?.email}</p>
-            </div>
-            <button 
-              onClick={() => signOut(auth)}
-              className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center hover:bg-bg-card-dark hover:text-white transition-all duration-300 group"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7" /></svg>
-            </button>
-          </div>
-        </header>
-
-        {/* Hero Section */}
-        <section className="flex flex-col xl:flex-row xl:items-end justify-between gap-12 mb-12">
-          <div className="max-w-2xl">
-            <motion.h1 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="font-serif text-6xl md:text-7xl text-text-primary leading-[1.1] tracking-tight mb-6"
-            >
-              Master <span className="italic font-light opacity-50">your</span> <br />
-              Digital <span className="text-accent-yellow drop-shadow-sm font-bold">Presence.</span>
-            </motion.h1>
-            <div className="flex gap-4">
-              <button className="px-8 py-4 bg-bg-card-dark text-white rounded-full text-xs font-bold uppercase tracking-[0.15em] hover:scale-105 transition-transform">
-                Generate Article
-              </button>
-              <button className="px-8 py-4 bg-white text-text-primary rounded-full text-xs font-bold uppercase tracking-[0.15em] border border-white/50 hover:bg-neutral-50 transition-colors">
-                View Schedule
-              </button>
-            </div>
-          </div>
-
-          <Card variant="glass" className="flex flex-row gap-0 py-6 px-10">
-            <StatBadge label="Total Reads" value="24.8k" trend="+12%" />
-            <StatBadge label="Live Users" value="842" />
-            <StatBadge label="Conversion" value="3.2%" trend="+0.4%" />
-          </Card>
-        </section>
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-1">
-          
-          {/* Card 1: Content Hub */}
-          <Card className="flex flex-col">
-            <div className="flex justify-between items-start mb-8">
-              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-text-secondary">Content Hub</h3>
-              <div className="w-2 h-2 rounded-full bg-accent-yellow animate-pulse" />
-            </div>
-            <div className="space-y-6 flex-1">
-              {[
-                { title: 'The Future of AI', type: 'Technical', date: 'Oct 12' },
-                { title: 'Quantum Computing 101', type: 'Deep-dive', date: 'Oct 10' },
-                { title: 'Linguistic Recovery', type: 'Research', date: 'Oct 08' }
-              ].map((item, i) => (
-                <div key={i} className="group cursor-pointer">
-                  <p className="text-sm font-bold text-text-primary group-hover:text-accent-yellow transition-colors">{item.title}</p>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{item.type}</span>
-                    <span className="text-[10px] text-text-secondary">{item.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="mt-8 text-[10px] font-bold uppercase tracking-[0.2em] text-text-primary border-b-2 border-accent-yellow w-fit pb-1">
-              Go to Articles
-            </button>
-          </Card>
-
-          {/* Card 2: Engagement Analysis */}
-          <Card variant="dark" className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-yellow/10 rounded-full blur-3xl group-hover:bg-accent-yellow/20 transition-colors" />
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] opacity-50 mb-8">Engagement</h3>
-            <div className="flex items-center justify-center h-48 mb-8 relative">
-              <div className="w-36 h-36 rounded-full border-[10px] border-white/5 border-t-accent-yellow shadow-[0_0_30px_rgba(252,225,102,0.2)]" />
-              <div className="absolute text-center">
-                <p className="text-4xl font-bold tracking-tight">88%</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Retention</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/5 p-4 rounded-2xl">
-                <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Avg Time</p>
-                <p className="text-lg font-bold">4m 12s</p>
-              </div>
-              <div className="bg-white/5 p-4 rounded-2xl">
-                <p className="text-[10px] font-bold uppercase opacity-40 mb-1">Bounce</p>
-                <p className="text-lg font-bold">22.4%</p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Card 3: Upcoming Tasks */}
-          <Card variant="accent" className="flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-text-primary mb-8">Upcoming</h3>
-            <div className="space-y-4 flex-1">
-              {[
-                { task: 'Review AI Output', time: '10:00 AM' },
-                { task: 'Weekly Analytics', time: '02:30 PM' },
-                { task: 'Team Sync-up', time: '05:00 PM' }
-              ].map((t, i) => (
-                <div key={i} className="flex items-center gap-4 bg-white/40 p-4 rounded-2xl border border-white/40">
-                  <div className="w-1.5 h-1.5 rounded-full bg-text-primary" />
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-text-primary">{t.task}</p>
-                    <p className="text-[10px] font-medium text-text-secondary mt-0.5">{t.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="mt-8 py-4 bg-white/60 hover:bg-white rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] transition-colors">
-              Full Schedule
-            </button>
-          </Card>
-
         </div>
-      </motion.div>
+
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 bg-white/40 hover:bg-white/60 transition-colors p-1.5 pr-5 rounded-full border border-white/40 cursor-pointer group">
+            <div className="w-9 h-9 rounded-full bg-accent-yellow flex items-center justify-center font-bold text-xs text-text-primary shadow-sm group-hover:scale-105 transition-transform">
+              {user?.displayName?.[0] || 'A'}
+            </div>
+            <span className="text-xs font-bold text-text-primary tracking-tight">{user?.displayName || 'Admin'}</span>
+          </div>
+          <button 
+            onClick={() => signOut(auth)}
+            className="w-11 h-11 rounded-full bg-bg-card-dark text-white flex items-center justify-center hover:scale-110 transition-all shadow-lg group"
+          >
+            <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7" /></svg>
+          </button>
+        </div>
+      </header>
+
+      {/* Hero Content */}
+      <section className="mb-20">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
+          <div>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-block px-4 py-1.5 rounded-full bg-accent-yellow/20 text-accent-yellow text-[10px] font-black uppercase tracking-[0.25em] mb-6"
+            >
+              Control Center
+            </motion.div>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="font-serif text-7xl md:text-8xl text-text-primary leading-[0.95] tracking-tighter"
+            >
+              Elevate <br />
+              <span className="italic font-light text-text-primary/40">the</span> <span className="text-text-primary">Standard.</span>
+            </motion.h1>
+          </div>
+
+          <div className="flex gap-4 mb-2">
+            <button className="h-16 px-10 bg-bg-card-dark text-white rounded-2xl text-xs font-bold uppercase tracking-[0.2em] hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] transition-all hover:-translate-y-1">
+              Create New
+            </button>
+            <button className="h-16 w-16 bg-white text-text-primary rounded-2xl flex items-center justify-center border border-black/5 hover:bg-neutral-50 transition-colors shadow-sm">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Row */}
+      <section className="mb-12">
+        <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-10 border border-white/60 shadow-sm inline-flex flex-wrap gap-0">
+          <StatBadge label="Total Reach" value="48.2k" trend="+18%" />
+          <StatBadge label="Active Students" value="1,204" />
+          <StatBadge label="Avg. Score" value="92" trend="+4%" />
+        </div>
+      </section>
+
+      {/* Content Grid */}
+      <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+        
+        {/* Articles List */}
+        <Card className="flex flex-col min-h-[400px]">
+          <div className="flex justify-between items-center mb-10">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-text-secondary/50">Recent Articles</h3>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+          </div>
+          <div className="space-y-8 flex-1">
+            {[
+              { title: 'The Art of Clean Code', type: 'Design', views: '2.4k' },
+              { title: 'Next.js 15 Deep Dive', type: 'Tech', views: '1.8k' },
+              { title: 'Linguistic Psychology', type: 'Research', views: '942' }
+            ].map((item, i) => (
+              <div key={i} className="group cursor-pointer flex items-center justify-between">
+                <div>
+                  <p className="text-base font-bold text-text-primary group-hover:translate-x-1 transition-transform">{item.title}</p>
+                  <p className="text-[10px] font-bold text-text-secondary/60 uppercase tracking-widest mt-1">{item.type}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-text-primary">{item.views}</p>
+                  <p className="text-[9px] font-bold text-emerald-500 uppercase">views</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="mt-10 group flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-text-primary">
+            View Repository 
+            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+          </button>
+        </Card>
+
+        {/* Dynamic Metric */}
+        <Card variant="dark" className="relative overflow-hidden flex flex-col justify-between group">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent-yellow/10 rounded-full blur-[100px] group-hover:bg-accent-yellow/20 transition-all duration-700" />
+          
+          <div className="relative">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-white/40 mb-12">Performance</h3>
+            <div className="flex flex-col gap-2">
+              <span className="text-6xl font-bold tracking-tighter">94%</span>
+              <span className="text-sm font-bold text-white/60">Average Completion Rate</span>
+            </div>
+          </div>
+
+          <div className="relative h-2 w-full bg-white/10 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: '94%' }}
+              transition={{ duration: 1.5, ease: "circOut" }}
+              className="h-full bg-accent-yellow shadow-[0_0_20px_rgba(252,225,102,0.4)]"
+            />
+          </div>
+        </Card>
+
+        {/* Active Schedule */}
+        <Card variant="accent" className="flex flex-col">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-text-primary/50 mb-10">Live Schedule</h3>
+          <div className="space-y-4 flex-1">
+            {[
+              { task: 'AI Pipeline Review', status: 'In Progress' },
+              { task: 'Student Onboarding', status: 'Upcoming' },
+              { task: 'Database Migration', status: 'Completed' }
+            ].map((t, i) => (
+              <div key={i} className="bg-white/60 p-5 rounded-2xl border border-white/60 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-text-primary">{t.task}</p>
+                  <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${t.status === 'In Progress' ? 'text-accent-yellow' : 'text-text-secondary/40'}`}>
+                    {t.status}
+                  </p>
+                </div>
+                {t.status === 'Completed' && (
+                  <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <button className="mt-8 h-14 bg-white/80 hover:bg-white rounded-xl text-[11px] font-black uppercase tracking-[0.2em] shadow-sm transition-all active:scale-95">
+            Manage Calendar
+          </button>
+        </Card>
+
+      </main>
     </div>
   );
 }

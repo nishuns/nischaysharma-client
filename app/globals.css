@@ -62,7 +62,9 @@ body {
   padding: 0;
   margin: 0;
   color: var(--text-primary);
-  background: var(--bg-global);
+  background: #fefaf3;
+  background-image: linear-gradient(135deg, #fefaf3 0%, #fbedcc 100%);
+  background-attachment: fixed;
   font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
