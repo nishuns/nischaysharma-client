@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MenuProps {
@@ -24,18 +23,13 @@ export default function Menu({ isOpen, onClose }: MenuProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
-          className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center"
+          className="menu"
         >
-          {/* Close Button */}
-          <button 
-            onClick={onClose}
-            className="absolute top-8 right-8 text-sm font-sans tracking-[2px] text-black uppercase hover:opacity-50 transition-all"
-          >
+          <button onClick={onClose} className="menu__close">
             — Close
           </button>
 
-          {/* Menu Items */}
-          <nav className="flex flex-col items-center gap-8">
+          <nav className="menu__nav">
             {menuItems.map((item, index) => (
               <motion.a
                 key={item.label}
@@ -44,21 +38,16 @@ export default function Menu({ isOpen, onClose }: MenuProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-                className="font-serif text-5xl md:text-7xl text-black hover:text-[#E57373] transition-colors uppercase tracking-widest font-light italic"
+                className="menu__link"
               >
                 {item.label}
               </motion.a>
             ))}
           </nav>
 
-          {/* Social Links or Footer info in Menu */}
-          <div className="absolute bottom-12 flex gap-8">
+          <div className="menu__socials">
             {['Instagram', 'LinkedIn', 'Twitter'].map((social) => (
-              <a 
-                key={social} 
-                href="#" 
-                className="text-[10px] tracking-[2px] text-neutral-400 uppercase hover:text-black transition-colors"
-              >
+              <a key={social} href="#" className="menu__social-link">
                 {social}
               </a>
             ))}

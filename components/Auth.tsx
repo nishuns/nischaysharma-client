@@ -34,35 +34,32 @@ export default function Auth() {
   };
 
   return (
-    <div className="w-full space-y-6">
-      {error && (
-        <p className="text-[10px] text-[#E57373] uppercase tracking-widest animate-pulse">
-          {error}
-        </p>
-      )}
+    <div className="auth">
+      {error && <p className="auth__error">{error}</p>}
       
-      <div className="space-y-4">
+      <div className="auth__fields">
         <Input 
           type="email" 
           placeholder="EMAIL" 
+          variant="minimal"
           value={email} 
           onChange={(e) => setEmail(e.target.value)}
-          className="bg-transparent border-0 border-b border-black/10 rounded-none px-0 text-center uppercase tracking-[0.2em] text-xs placeholder:text-black/20 focus:ring-0 focus:border-black transition-all"
         />
         <Input 
           type="password" 
           placeholder="PASSWORD" 
+          variant="minimal"
           value={password} 
           onChange={(e) => setPassword(e.target.value)}
-          className="bg-transparent border-0 border-b border-black/10 rounded-none px-0 text-center uppercase tracking-[0.2em] text-xs placeholder:text-black/20 focus:ring-0 focus:border-black transition-all"
         />
       </div>
 
-      <div className="pt-4">
+      <div className="auth__actions">
         <Button 
           onClick={handleLogin} 
           disabled={loading}
-          className="w-full bg-transparent border border-black/20 text-black hover:bg-black hover:text-white rounded-none text-[10px] uppercase tracking-[0.3em] h-12 transition-all duration-500"
+          variant="minimal"
+          className="btn--full"
         >
           {loading ? 'Entering...' : 'Enter Dashboard'}
         </Button>
