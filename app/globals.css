@@ -12,20 +12,17 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  
   /* Dashboard Theme Colors */
-  --bg-global: #a1a5b1;
+  --bg-global: #aeb2bc;
   --bg-dashboard: linear-gradient(135deg, #fefaf3 0%, #fbedcc 100%);
   --bg-card-light: #ffffff;
-  --bg-card-dark: #2d2d2d;
+  --bg-card-dark: #1a1a1a;
   --accent-yellow: #fce166;
   --accent-yellow-light: #fef5cc;
   --text-primary: #1a1a1a;
-  --text-secondary: #8a8a8a;
+  --text-secondary: #6b7280;
   --text-white: #ffffff;
-  --divider: #ebebeb;
+  --divider: #f3f4f6;
   
   /* Border Radius */
   --radius-card: 24px;
@@ -33,7 +30,7 @@
   --radius-dashboard: 32px;
   
   /* Shadows */
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
+  --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
 }
 
 @theme {
@@ -66,8 +63,14 @@ body {
   margin: 0;
   color: var(--text-primary);
   background: var(--bg-global);
-  font-family: var(--font-poppins), sans-serif;
+  font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif), serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
