@@ -6,56 +6,29 @@ import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
-// --- UI Components ---
+// --- Shared Layout Components ---
 
-const Card = ({ 
-  children, 
-  className = "", 
-  variant = "light"
-}: { 
-  children: React.ReactNode, 
-  className?: string, 
-  variant?: "light" | "dark" | "glass" | "accent"
-}) => {
-  const variants = {
-    light: "bg-white shadow-[0_8px_30px_rgba(0,0,0,0.04)] text-text-primary border border-black/[0.03]",
-    dark: "bg-bg-card-dark text-white shadow-xl",
-    glass: "bg-white/60 backdrop-blur-xl border border-white/40 shadow-soft text-text-primary",
-    accent: "bg-accent-yellow-light/50 text-text-primary border border-accent-yellow/20"
-  };
-
-  return (
-    <div className={`rounded-[28px] p-8 transition-all duration-500 ${variants[variant]} ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-const NavItem = ({ children, active = false }: { children: React.ReactNode, active?: boolean }) => (
-  <button className={`relative px-1 py-2 text-sm font-bold tracking-tight transition-all duration-300 ${
-    active ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
+const SidebarLink = ({ label, active = false }: { label: string, active?: boolean }) => (
+  <button className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+    active 
+      ? 'bg-neutral-900 text-white shadow-sm' 
+      : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
   }`}>
-    {children}
-    {active && (
-      <motion.div 
-        layoutId="navUnderline"
-        className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-yellow"
-      />
-    )}
+    {label}
   </button>
 );
 
-const StatBadge = ({ label, value, trend }: { label: string, value: string, trend?: string }) => (
-  <div className="flex flex-col gap-1 pr-12 last:pr-0 border-r border-black/[0.05] last:border-0">
-    <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-text-secondary/60">{label}</span>
-    <div className="flex items-baseline gap-2">
-      <span className="text-4xl font-bold tracking-tight text-text-primary">{value}</span>
-      {trend && <span className="text-[11px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">{trend}</span>}
+const MetricCard = ({ title, value, subtext }: { title: string, value: string, subtext: string }) => (
+  <div className="p-6 bg-white border border-neutral-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+    <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">{title}</h3>
+    <div className="flex items-baseline gap-2 mb-1">
+      <span className="text-3xl font-serif text-neutral-900">{value}</span>
     </div>
+    <span className="text-xs text-neutral-400 font-medium">{subtext}</span>
   </div>
 );
 
-// --- Main Page ---
+// --- Main Dashboard Page ---
 
 export default function AdminDashboard() {
   const [user, setUser] = useState<User | null>(null);
@@ -75,169 +48,213 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="animate-pulse flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-neutral-900 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium text-neutral-500 uppercase tracking-widest">Loading Workspace</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen w-full flex flex-col p-6 md:p-12 lg:p-16 max-w-[1600px] mx-auto">
-      {/* Navigation - Clean & Modern */}
-      <header className="flex items-center justify-between mb-20">
-        <div className="flex items-center gap-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-bg-card-dark rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-accent-yellow font-serif text-xl font-bold">T</span>
+    <div className="min-h-screen bg-neutral-50 flex font-sans">
+      
+      {/* --- Sidebar Navigation --- */}
+      <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col justify-between fixed h-screen left-0 top-0 z-10">
+        <div>
+          {/* Logo Area */}
+          <div className="p-6 border-b border-neutral-100 flex items-center gap-3">
+            <div className="w-8 h-8 bg-neutral-900 text-white rounded-md flex items-center justify-center font-serif font-bold text-lg">
+              T
             </div>
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-text-primary">TaughtCode</h2>
+            <div>
+              <h1 className="font-bold text-neutral-900 tracking-tight leading-none">TaughtCode</h1>
+              <p className="text-[10px] uppercase tracking-widest text-neutral-400 mt-1 font-semibold">Workspace</p>
+            </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8">
-            {['Overview', 'Articles', 'Students', 'Templates'].map((tab, i) => (
-              <NavItem key={tab} active={i === 0}>{tab}</NavItem>
-            ))}
+          {/* Nav Links */}
+          <nav className="p-4 space-y-1">
+            <SidebarLink label="Overview" active />
+            <SidebarLink label="Articles" />
+            <SidebarLink label="Subscribers" />
+            <SidebarLink label="Comments" />
+            <SidebarLink label="Settings" />
           </nav>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3 bg-white/40 hover:bg-white/60 transition-colors p-1.5 pr-5 rounded-full border border-white/40 cursor-pointer group">
-            <div className="w-9 h-9 rounded-full bg-accent-yellow flex items-center justify-center font-bold text-xs text-text-primary shadow-sm group-hover:scale-105 transition-transform">
-              {user?.displayName?.[0] || 'A'}
+        {/* User Profile & Logout */}
+        <div className="p-4 border-t border-neutral-100">
+          <div className="flex items-center gap-3 p-2 mb-2 rounded-lg bg-neutral-50 border border-neutral-100">
+            <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold text-neutral-600">
+              {user?.email?.[0].toUpperCase() || 'A'}
             </div>
-            <span className="text-xs font-bold text-text-primary tracking-tight">{user?.displayName || 'Admin'}</span>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-xs font-semibold text-neutral-900 truncate">{user?.displayName || 'Admin'}</p>
+              <p className="text-[10px] text-neutral-500 truncate">{user?.email}</p>
+            </div>
           </div>
           <button 
             onClick={() => signOut(auth)}
-            className="w-11 h-11 rounded-full bg-bg-card-dark text-white flex items-center justify-center hover:scale-110 transition-all shadow-lg group"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
           >
-            <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7" /></svg>
+            Sign Out
           </button>
         </div>
-      </header>
+      </aside>
 
-      {/* Hero Content */}
-      <section className="mb-20">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
-          <div>
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-block px-4 py-1.5 rounded-full bg-accent-yellow/20 text-accent-yellow text-[10px] font-black uppercase tracking-[0.25em] mb-6"
-            >
-              Control Center
-            </motion.div>
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="font-serif text-7xl md:text-8xl text-text-primary leading-[0.95] tracking-tighter"
-            >
-              Elevate <br />
-              <span className="italic font-light text-text-primary/40">the</span> <span className="text-text-primary">Standard.</span>
-            </motion.h1>
-          </div>
-
-          <div className="flex gap-4 mb-2">
-            <button className="h-16 px-10 bg-bg-card-dark text-white rounded-2xl text-xs font-bold uppercase tracking-[0.2em] hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] transition-all hover:-translate-y-1">
-              Create New
-            </button>
-            <button className="h-16 w-16 bg-white text-text-primary rounded-2xl flex items-center justify-center border border-black/5 hover:bg-neutral-50 transition-colors shadow-sm">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Row */}
-      <section className="mb-12">
-        <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-10 border border-white/60 shadow-sm inline-flex flex-wrap gap-0">
-          <StatBadge label="Total Reach" value="48.2k" trend="+18%" />
-          <StatBadge label="Active Students" value="1,204" />
-          <StatBadge label="Avg. Score" value="92" trend="+4%" />
-        </div>
-      </section>
-
-      {/* Content Grid */}
-      <main className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+      {/* --- Main Content Area --- */}
+      <main className="flex-1 ml-64 min-h-screen">
         
-        {/* Articles List */}
-        <Card className="flex flex-col min-h-[400px]">
-          <div className="flex justify-between items-center mb-10">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-text-secondary/50">Recent Articles</h3>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+        {/* Top Header */}
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-neutral-200 px-8 flex items-center justify-between sticky top-0 z-10">
+          <div>
+            <h2 className="text-lg font-bold text-neutral-900">Dashboard</h2>
+            <p className="text-xs text-neutral-500 font-medium">Welcome back, {user?.displayName || 'Administrator'}.</p>
           </div>
-          <div className="space-y-8 flex-1">
-            {[
-              { title: 'The Art of Clean Code', type: 'Design', views: '2.4k' },
-              { title: 'Next.js 15 Deep Dive', type: 'Tech', views: '1.8k' },
-              { title: 'Linguistic Psychology', type: 'Research', views: '942' }
-            ].map((item, i) => (
-              <div key={i} className="group cursor-pointer flex items-center justify-between">
-                <div>
-                  <p className="text-base font-bold text-text-primary group-hover:translate-x-1 transition-transform">{item.title}</p>
-                  <p className="text-[10px] font-bold text-text-secondary/60 uppercase tracking-widest mt-1">{item.type}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-text-primary">{item.views}</p>
-                  <p className="text-[9px] font-bold text-emerald-500 uppercase">views</p>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 text-sm font-semibold text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors shadow-sm">
+              View Site
+            </button>
+            <button className="px-4 py-2 text-sm font-semibold text-white bg-neutral-900 rounded-lg hover:bg-neutral-800 transition-colors shadow-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
+              New Article
+            </button>
           </div>
-          <button className="mt-10 group flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-text-primary">
-            View Repository 
-            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-          </button>
-        </Card>
+        </header>
 
-        {/* Dynamic Metric */}
-        <Card variant="dark" className="relative overflow-hidden flex flex-col justify-between group">
-          <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent-yellow/10 rounded-full blur-[100px] group-hover:bg-accent-yellow/20 transition-all duration-700" />
+        <div className="p-8 max-w-6xl mx-auto">
           
-          <div className="relative">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-white/40 mb-12">Performance</h3>
-            <div className="flex flex-col gap-2">
-              <span className="text-6xl font-bold tracking-tighter">94%</span>
-              <span className="text-sm font-bold text-white/60">Average Completion Rate</span>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Page Title section */}
+            <div className="mb-8">
+              <h1 className="font-serif text-4xl text-neutral-900">Platform Overview</h1>
+              <p className="text-sm text-neutral-500 mt-2">A high-level summary of your content and engagement.</p>
             </div>
-          </div>
 
-          <div className="relative h-2 w-full bg-white/10 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: '94%' }}
-              transition={{ duration: 1.5, ease: "circOut" }}
-              className="h-full bg-accent-yellow shadow-[0_0_20px_rgba(252,225,102,0.4)]"
-            />
-          </div>
-        </Card>
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+              <MetricCard 
+                title="Total Reads" 
+                value="24.8k" 
+                subtext="+12% from last month" 
+              />
+              <MetricCard 
+                title="Active Subscribers" 
+                value="1,204" 
+                subtext="+42 new this week" 
+              />
+              <MetricCard 
+                title="Published Articles" 
+                value="48" 
+                subtext="2 drafts pending review" 
+              />
+            </div>
 
-        {/* Active Schedule */}
-        <Card variant="accent" className="flex flex-col">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-text-primary/50 mb-10">Live Schedule</h3>
-          <div className="space-y-4 flex-1">
-            {[
-              { task: 'AI Pipeline Review', status: 'In Progress' },
-              { task: 'Student Onboarding', status: 'Upcoming' },
-              { task: 'Database Migration', status: 'Completed' }
-            ].map((t, i) => (
-              <div key={i} className="bg-white/60 p-5 rounded-2xl border border-white/60 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-text-primary">{t.task}</p>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${t.status === 'In Progress' ? 'text-accent-yellow' : 'text-text-secondary/40'}`}>
-                    {t.status}
-                  </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              
+              {/* Recent Content Table/List */}
+              <div className="lg:col-span-2 bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-neutral-200 flex items-center justify-between bg-neutral-50/50">
+                  <h3 className="text-sm font-semibold text-neutral-900">Recent Articles</h3>
+                  <button className="text-xs font-semibold text-neutral-500 hover:text-neutral-900">View All &rarr;</button>
                 </div>
-                {t.status === 'Completed' && (
-                  <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
-                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                )}
+                <div className="divide-y divide-neutral-100">
+                  {[
+                    { title: 'The Future of AI Architecture', status: 'Published', date: 'Oct 12, 2026', author: 'N. Sharma' },
+                    { title: 'Quantum Computing Fundamentals', status: 'Draft', date: 'Oct 10, 2026', author: 'N. Sharma' },
+                    { title: 'Linguistic Psychology in UX', status: 'Published', date: 'Oct 08, 2026', author: 'System AI' },
+                    { title: 'Designing Minimalist Dashboards', status: 'Review', date: 'Oct 05, 2026', author: 'N. Sharma' }
+                  ].map((item, i) => (
+                    <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-neutral-50 transition-colors cursor-pointer group">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-neutral-900 group-hover:text-blue-600 transition-colors">{item.title}</h4>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-neutral-500">
+                          <span>{item.author}</span>
+                          <span className="w-1 h-1 rounded-full bg-neutral-300" />
+                          <span>{item.date}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md ${
+                          item.status === 'Published' ? 'bg-green-50 text-green-700 border border-green-200/50' :
+                          item.status === 'Draft' ? 'bg-neutral-100 text-neutral-600 border border-neutral-200' :
+                          'bg-yellow-50 text-yellow-700 border border-yellow-200/50'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-          <button className="mt-8 h-14 bg-white/80 hover:bg-white rounded-xl text-[11px] font-black uppercase tracking-[0.2em] shadow-sm transition-all active:scale-95">
-            Manage Calendar
-          </button>
-        </Card>
 
+              {/* Side Column: Quick Actions & System Status */}
+              <div className="space-y-6">
+                
+                {/* System Status Card */}
+                <div className="bg-white border border-neutral-200 rounded-xl shadow-sm p-6">
+                  <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-4">System Status</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-sm font-medium text-neutral-700">Database Connection</span>
+                      </div>
+                      <span className="text-xs text-neutral-500">Healthy</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-sm font-medium text-neutral-700">AI Article Generator</span>
+                      </div>
+                      <span className="text-xs text-neutral-500">Online</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-sm font-medium text-neutral-700">Storage Bucket</span>
+                      </div>
+                      <span className="text-xs text-neutral-500">92% Free</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Shortcuts */}
+                <div className="bg-neutral-900 rounded-xl p-6 text-white shadow-md relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
+                  <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">Quick Shortcuts</h3>
+                  <div className="space-y-2 relative z-10">
+                    <button className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium">
+                      Generate with AI
+                      <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    </button>
+                    <button className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium">
+                      Manage Templates
+                      <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                    </button>
+                    <button className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-sm font-medium text-red-300 hover:text-red-200">
+                      Clear Cache
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </main>
     </div>
   );

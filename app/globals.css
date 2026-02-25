@@ -12,59 +12,23 @@
 }
 
 :root {
-  /* Dashboard Theme Colors */
-  --bg-global: #aeb2bc;
-  --bg-dashboard: linear-gradient(135deg, #fefaf3 0%, #fbedcc 100%);
-  --bg-card-light: #ffffff;
-  --bg-card-dark: #1a1a1a;
-  --accent-yellow: #fce166;
-  --accent-yellow-light: #fef5cc;
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b7280;
-  --text-white: #ffffff;
-  --divider: #f3f4f6;
-  
-  /* Border Radius */
-  --radius-card: 24px;
-  --radius-pill: 9999px;
-  --radius-dashboard: 32px;
-  
-  /* Shadows */
-  --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+  --background: #fafafa;
+  --foreground: #0a0a0a;
 }
 
-@theme {
-  --font-sans: var(--font-poppins), system-ui, sans-serif;
-  --font-serif: var(--font-playfair), Georgia, serif;
-  
-  --color-bg-global: var(--bg-global);
-  --color-accent-yellow: var(--accent-yellow);
-  --color-accent-yellow-light: var(--accent-yellow-light);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-bg-card-dark: var(--bg-card-dark);
-  
-  --radius-card: var(--radius-card);
-  --radius-pill: var(--radius-pill);
-  --radius-dashboard: var(--radius-dashboard);
-  
-  --shadow-soft: var(--shadow-soft);
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #000000;
+    --foreground: #ffffff;
+  }
 }
 
 html,
 body {
   padding: 0;
   margin: 0;
-  color: var(--text-primary);
-  background: #fefaf3;
-  background-image: linear-gradient(135deg, #fefaf3 0%, #fbedcc 100%);
-  background-attachment: fixed;
+  color: var(--foreground);
+  background: var(--background);
   font-family: var(--font-sans), sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -73,17 +37,4 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-serif), serif;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-playfair), serif;
-}
-
-/* Custom utility for the background image overlay */
-.bg-overlay {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(2px);
-  z-index: 1;
 }
