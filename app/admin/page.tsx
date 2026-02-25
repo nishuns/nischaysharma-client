@@ -34,7 +34,7 @@ const PillButton = ({
   return (
     <button 
       onClick={onClick}
-      className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${variants[variant]} ${className}`}
+      className={`px-8 py-3.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-200 flex items-center justify-center gap-3 ${variants[variant]} ${className}`}
     >
       {children}
     </button>
@@ -42,7 +42,7 @@ const PillButton = ({
 };
 
 const NavPill = ({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) => (
-  <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+  <button className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-sm font-semibold transition-all duration-200 ${
     active 
       ? 'bg-neutral-900 text-white shadow-premium' 
       : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
@@ -53,9 +53,9 @@ const NavPill = ({ icon, label, active = false }: { icon: React.ReactNode, label
 );
 
 const StatMini = ({ label, value }: { label: string, value: string }) => (
-  <div className="flex flex-col gap-2">
-    <span className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">{label}</span>
-    <span className="text-3xl font-serif tracking-tight text-neutral-900">{value}</span>
+  <div className="flex flex-col gap-3">
+    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">{label}</span>
+    <span className="text-4xl font-serif tracking-tight text-neutral-900">{value}</span>
   </div>
 );
 
