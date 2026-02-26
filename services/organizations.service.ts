@@ -26,9 +26,18 @@ export interface OrganizationData {
 
 export const organizationsService = {
   list: (token: string) => {
-    return apiFetch<{ success: boolean; data: OrganizationData[] }>('/organizations', {
+    return apiFetch<{ success: boolean; data: (OrganizationData & { isOwner?: boolean; isMember?: boolean })[] }>('/organizations', {
       method: 'GET',
       token,
+    });
+  },
+
+  join: (orgId: string, token: string) => {
+    // This typically involves updating the user profile to link the orgId
+    return apiFetch<{ success: boolean; data: any }>('/users/me', {
+      method: 'PATCH',
+      token,
+      body: { organizationId: orgId },
     });
   },
 

@@ -11,7 +11,7 @@ export default function OrganizationPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [organization, setOrganization] = useState<OrganizationData | null>(null);
-  const [allOrganizations, setAllOrganizations] = useState<OrganizationData[]>([]);
+  const [allOrganizations, setAllOrganizations] = useState<(OrganizationData & { isOwner?: boolean; isMember?: boolean })[]>([]);
   const [error, setError] = useState('');
   
   // Form states
@@ -42,6 +42,7 @@ export default function OrganizationPage() {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
 
+      // 1. Get current user's profile
       const userProfile = await usersService.getMe(token);
       
       if (userProfile.success && userProfile.data.organizationId) {
@@ -55,6 +56,7 @@ export default function OrganizationPage() {
         }
       }
 
+      // 2. If no linked org, fetch all organizations
       const allOrgsResponse = await organizationsService.list(token);
       if (allOrgsResponse.success) {
         setAllOrganizations(allOrgsResponse.data);
@@ -65,6 +67,24 @@ export default function OrganizationPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEnterWorkspace = async (orgId: string) => {
+    try {
+      setActionLoading(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+
+      const response = await organizationsService.join(orgId, token);
+      if (response.success) {
+        // Re-fetch to load the full workspace
+        fetchData();
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -233,9 +253,20 @@ export default function OrganizationPage() {
                             <span>{org.members?.length || 0} Members</span>
                           </div>
                         </div>
-                        <Button variant="secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>
-                          Request Access
-                        </Button>
+                        {org.isMember ? (
+                          <Button 
+                            variant="primary" 
+                            style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}
+                            onClick={() => handleEnterWorkspace(org.id!)}
+                            disabled={actionLoading}
+                          >
+                            Enter Workspace
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>
+                            Request Access
+                          </Button>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -264,7 +295,7 @@ export default function OrganizationPage() {
       <div className="dashboard__grid-layout">
         <div className="lg:col-span-2">
           
-          {/* Add Member Form (Inline/Modal-ish) */}
+          {/* Add Member Form */}
           {showAddMember && (
             <div className="card card--padded" style={{ marginBottom: '2rem', border: '1px solid #000' }}>
               <h3 className="dashboard__recent-item-title" style={{ marginBottom: '1.5rem' }}>Add New Member</h3>
