@@ -1,6 +1,6 @@
 export const getBaseUrl = () => {
   // Use the environment variable if provided, otherwise default to local server with API prefix
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api/v1';
 };
 
 interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
@@ -29,6 +29,7 @@ export async function apiFetch<T>(endpoint: string, options: ApiFetchOptions = {
     }
   }
 
+  console.log('xvf', url)
   const response = await fetch(url, {
     ...options,
     headers,
@@ -47,5 +48,5 @@ export async function apiFetch<T>(endpoint: string, options: ApiFetchOptions = {
 
   // If response has no content, return empty object to prevent JSON parse error
   const text = await response.text();
-  return text ? JSON.parse(text) : {};
+  return text ? JSON.parse(text) : <any>{};
 }

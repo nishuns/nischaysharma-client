@@ -47,6 +47,14 @@ export const organizationsService = {
     });
   },
 
+  update: (orgId: string, data: { name?: string; type?: string; description?: string }, token: string) => {
+    return apiFetch<{ success: boolean; data: OrganizationData }>(`/organizations/${orgId}`, {
+      method: 'PATCH',
+      token,
+      body: data,
+    });
+  },
+
   addMember: (orgId: string, data: { userId: string; role: string }, token: string) => {
     return apiFetch<{ success: boolean; data: OrganizationData }>(`/organizations/${orgId}/members`, {
       method: 'POST',

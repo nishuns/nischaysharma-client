@@ -9,14 +9,28 @@ import { Input } from '@/components/ui/Input';
 
 export default function OrganizationPage() {
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [organization, setOrganization] = useState<OrganizationData | null>(null);
   const [allOrganizations, setAllOrganizations] = useState<OrganizationData[]>([]);
   const [error, setError] = useState('');
   
-  // Form states for creating organization
+  // Form states
   const [orgName, setOrgName] = useState('');
   const [orgDescription, setOrgDescription] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  
+  // Modal states
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [showEditOrg, setShowEditOrg] = useState(false);
+  
+  // New member state
+  const [newMemberId, setNewMemberId] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState('user');
+  
+  // New client state
+  const [newClientUrl, setNewClientUrl] = useState('');
+  const [newClientApis, setNewClientApis] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -28,19 +42,19 @@ export default function OrganizationPage() {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
 
-      // 1. Get current user's profile to see if they belong to an org
       const userProfile = await usersService.getMe(token);
       
       if (userProfile.success && userProfile.data.organizationId) {
         const orgResponse = await organizationsService.getById(userProfile.data.organizationId, token);
         if (orgResponse.success) {
           setOrganization(orgResponse.data);
+          setOrgName(orgResponse.data.name);
+          setOrgDescription(orgResponse.data.description || '');
           setLoading(false);
           return;
         }
       }
 
-      // 2. If no personal org, fetch all organizations to see if any exist
       const allOrgsResponse = await organizationsService.list(token);
       if (allOrgsResponse.success) {
         setAllOrganizations(allOrgsResponse.data);
@@ -57,7 +71,7 @@ export default function OrganizationPage() {
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setLoading(true);
+      setActionLoading(true);
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
 
@@ -68,11 +82,87 @@ export default function OrganizationPage() {
 
       if (response.success) {
         setOrganization(response.data);
+        setShowCreateForm(false);
       }
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization?.id) return;
+    try {
+      setActionLoading(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+
+      const response = await organizationsService.addMember(organization.id, {
+        userId: newMemberId,
+        role: newMemberRole
+      }, token);
+
+      if (response.success) {
+        setOrganization(response.data);
+        setShowAddMember(false);
+        setNewMemberId('');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization?.id) return;
+    try {
+      setActionLoading(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+
+      const response = await organizationsService.addClient(organization.id, {
+        url: newClientUrl,
+        whitelistedApis: newClientApis.split(',').map(s => s.trim()).filter(s => s !== '')
+      }, token);
+
+      if (response.success) {
+        setOrganization(response.data);
+        setShowAddClient(false);
+        setNewClientUrl('');
+        setNewClientApis('');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization?.id) return;
+    try {
+      setActionLoading(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+
+      const response = await organizationsService.update(organization.id, {
+        name: orgName,
+        description: orgDescription
+      }, token);
+
+      if (response.success) {
+        setOrganization(response.data);
+        setShowEditOrg(false);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -80,7 +170,7 @@ export default function OrganizationPage() {
     return <div className="loading">Loading organization settings...</div>;
   }
 
-  // View 1: User has no organization, show list of existing or create new
+  // View 1: User has no organization
   if (!organization) {
     return (
       <div className="organization">
@@ -112,9 +202,10 @@ export default function OrganizationPage() {
                       onChange={(e) => setOrgDescription(e.target.value)}
                     />
                   </div>
+                  {error && <p className="auth__error" style={{ marginBottom: '1rem' }}>{error}</p>}
                   <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                    <Button type="submit" variant="primary" className="btn--full">
-                      Confirm & Create
+                    <Button type="submit" variant="primary" className="btn--full" disabled={actionLoading}>
+                      {actionLoading ? 'Creating...' : 'Confirm & Create'}
                     </Button>
                     <Button type="button" variant="secondary" onClick={() => setShowCreateForm(false)}>
                       Cancel
@@ -162,7 +253,7 @@ export default function OrganizationPage() {
     );
   }
 
-  // View 2: User has an organization, show its settings
+  // View 2: User has an organization
   return (
     <div className="organization">
       <div className="dashboard__title">
@@ -172,11 +263,85 @@ export default function OrganizationPage() {
 
       <div className="dashboard__grid-layout">
         <div className="lg:col-span-2">
-          {/* Members Section */}
+          
+          {/* Add Member Form (Inline/Modal-ish) */}
+          {showAddMember && (
+            <div className="card card--padded" style={{ marginBottom: '2rem', border: '1px solid #000' }}>
+              <h3 className="dashboard__recent-item-title" style={{ marginBottom: '1.5rem' }}>Add New Member</h3>
+              <form onSubmit={handleAddMember} className="auth__fields">
+                <div className="organization__form-group">
+                  <label className="label">User ID</label>
+                  <Input 
+                    placeholder="Enter User UID" 
+                    value={newMemberId} 
+                    onChange={(e) => setNewMemberId(e.target.value)} 
+                    required
+                  />
+                </div>
+                <div className="organization__form-group">
+                  <label className="label">Role</label>
+                  <select 
+                    value={newMemberRole} 
+                    onChange={(e) => setNewMemberRole(e.target.value)}
+                    className="input"
+                    style={{ background: '#fff' }}
+                  >
+                    <option value="user">User</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <Button type="submit" variant="primary" disabled={actionLoading}>
+                    {actionLoading ? 'Adding...' : 'Add Member'}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setShowAddMember(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Add Client Form */}
+          {showAddClient && (
+            <div className="card card--padded" style={{ marginBottom: '2rem', border: '1px solid #000' }}>
+              <h3 className="dashboard__recent-item-title" style={{ marginBottom: '1.5rem' }}>Whitelist New Client</h3>
+              <form onSubmit={handleAddClient} className="auth__fields">
+                <div className="organization__form-group">
+                  <label className="label">Client URL</label>
+                  <Input 
+                    placeholder="https://example.com" 
+                    value={newClientUrl} 
+                    onChange={(e) => setNewClientUrl(e.target.value)} 
+                    required
+                  />
+                </div>
+                <div className="organization__form-group">
+                  <label className="label">Whitelisted APIs (comma separated)</label>
+                  <Input 
+                    placeholder="articles, users, jobs" 
+                    value={newClientApis} 
+                    onChange={(e) => setNewClientApis(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <Button type="submit" variant="primary" disabled={actionLoading}>
+                    {actionLoading ? 'Whitelisting...' : 'Add Client'}
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setShowAddClient(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Members List */}
           <div className="card dashboard__recent" style={{ marginBottom: '2rem' }}>
             <div className="dashboard__recent-header">
               <h3>Members</h3>
-              <button className="btn btn--secondary" style={{ padding: '0.5rem 1rem', height: 'auto' }}>
+              <button className="btn btn--secondary" style={{ padding: '0.5rem 1rem', height: 'auto' }} onClick={() => setShowAddMember(true)}>
                 + Add Member
               </button>
             </div>
@@ -193,20 +358,17 @@ export default function OrganizationPage() {
                     <span className={`badge badge--${member.role === 'admin' ? 'published' : 'draft'}`}>
                       {member.role}
                     </span>
-                    <button className="btn btn--ghost" style={{ padding: '0.2rem' }}>
-                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: '1rem' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Whitelisted Clients Section */}
+          {/* Clients List */}
           <div className="card dashboard__recent">
             <div className="dashboard__recent-header">
               <h3>Whitelisted Clients</h3>
-              <button className="btn btn--secondary" style={{ padding: '0.5rem 1rem', height: 'auto' }}>
+              <button className="btn btn--secondary" style={{ padding: '0.5rem 1rem', height: 'auto' }} onClick={() => setShowAddClient(true)}>
                 + Add Client
               </button>
             </div>
@@ -217,10 +379,24 @@ export default function OrganizationPage() {
                     <div className="dashboard__recent-item-info">
                       <div className="dashboard__recent-item-title">{client.url}</div>
                       <div className="dashboard__recent-item-meta">
-                        <span>{client.whitelistedApis.length} APIs allowed</span>
+                        <span>{client.whitelistedApis?.join(', ') || 'All'} APIs allowed</span>
                       </div>
                     </div>
-                    <button className="btn btn--ghost" style={{ color: '#ff6b6b' }}>Remove</button>
+                    <button 
+                      className="btn btn--ghost" 
+                      style={{ color: '#ff6b6b' }}
+                      onClick={async () => {
+                        if (confirm('Are you sure?')) {
+                          const token = await auth.currentUser?.getIdToken();
+                          if (token && organization.id) {
+                            await organizationsService.removeClient(organization.id, client.url, token);
+                            fetchData();
+                          }
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
                   </div>
                 ))
               ) : (
@@ -233,22 +409,43 @@ export default function OrganizationPage() {
         </div>
 
         <div className="dashboard__sidebar-col">
-          <div className="card card--padded">
-            <h3 className="label" style={{ marginBottom: '1.5rem', display: 'block', fontSize: '0.625rem', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Organization Details</h3>
-            <div className="stat-group">
-              <span className="label">Type</span>
-              <p className="value">{organization.type || 'Standard'}</p>
+          {showEditOrg ? (
+            <div className="card card--padded">
+              <h3 className="label" style={{ marginBottom: '1.5rem' }}>Edit Details</h3>
+              <form onSubmit={handleUpdateOrg} className="auth__fields">
+                <div className="organization__form-group">
+                  <label className="label">Name</label>
+                  <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} required />
+                </div>
+                <div className="organization__form-group">
+                  <label className="label">Description</label>
+                  <Input value={orgDescription} onChange={(e) => setOrgDescription(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <Button type="submit" variant="primary" className="btn--full">Save</Button>
+                  <Button type="button" variant="secondary" onClick={() => setShowEditOrg(false)}>Cancel</Button>
+                </div>
+              </form>
             </div>
-            <div className="stat-group">
-              <span className="label">Description</span>
-              <p className="description">
-                {organization.description || 'No description provided.'}
-              </p>
+          ) : (
+            <div className="card card--padded">
+              <h3 className="label" style={{ marginBottom: '1.5rem', display: 'block', fontSize: '0.625rem', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Organization Details</h3>
+              <div className="stat-group">
+                <span className="label">Type</span>
+                <p className="value">{organization.type || 'Standard'}</p>
+              </div>
+              <div className="stat-group">
+                <span className="label">Description</span>
+                <p className="description">
+                  {organization.description || 'No description provided.'}
+                </p>
+              </div>
+              {error && <p className="auth__error" style={{ marginTop: '1rem' }}>{error}</p>}
+              <Button variant="secondary" className="btn--full" style={{ marginTop: '1.5rem' }} onClick={() => setShowEditOrg(true)}>
+                Edit Details
+              </Button>
             </div>
-            <Button variant="secondary" className="btn--full" style={{ marginTop: '1.5rem' }}>
-              Edit Details
-            </Button>
-          </div>
+          )}
         </div>
       </div>
     </div>
