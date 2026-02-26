@@ -10,11 +10,13 @@ import { Input } from '@/components/ui/Input';
 export default function OrganizationPage() {
   const [loading, setLoading] = useState(true);
   const [organization, setOrganization] = useState<OrganizationData | null>(null);
+  const [allOrganizations, setAllOrganizations] = useState<OrganizationData[]>([]);
   const [error, setError] = useState('');
   
   // Form states for creating organization
   const [orgName, setOrgName] = useState('');
   const [orgDescription, setOrgDescription] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -26,13 +28,24 @@ export default function OrganizationPage() {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
 
+      // 1. Get current user's profile to see if they belong to an org
       const userProfile = await usersService.getMe(token);
+      
       if (userProfile.success && userProfile.data.organizationId) {
         const orgResponse = await organizationsService.getById(userProfile.data.organizationId, token);
         if (orgResponse.success) {
           setOrganization(orgResponse.data);
+          setLoading(false);
+          return;
         }
       }
+
+      // 2. If no personal org, fetch all organizations to see if any exist
+      const allOrgsResponse = await organizationsService.list(token);
+      if (allOrgsResponse.success) {
+        setAllOrganizations(allOrgsResponse.data);
+      }
+
     } catch (err: any) {
       console.error('Error fetching organization data:', err);
       setError(err.message);
@@ -67,42 +80,89 @@ export default function OrganizationPage() {
     return <div className="loading">Loading organization settings...</div>;
   }
 
+  // View 1: User has no organization, show list of existing or create new
   if (!organization) {
     return (
       <div className="organization">
         <div className="dashboard__title">
-          <h2>Create Organization</h2>
-          <p>Get started by creating an organization for your team.</p>
+          <h2>Organizations</h2>
+          <p>You are not currently associated with an organization.</p>
         </div>
         
-        <div className="card card--padded organization__setup">
-          <form onSubmit={handleCreateOrganization} className="auth__fields">
-            <div className="organization__form-group">
-              <label className="label">Organization Name</label>
-              <Input 
-                placeholder="e.g. TaughtCode Team" 
-                value={orgName} 
-                onChange={(e) => setOrgName(e.target.value)} 
-                required
-              />
-            </div>
-            <div className="organization__form-group">
-              <label className="label">Description (Optional)</label>
-              <Input 
-                placeholder="Tell us about your organization" 
-                value={orgDescription} 
-                onChange={(e) => setOrgDescription(e.target.value)}
-              />
-            </div>
-            <Button type="submit" variant="primary" className="btn--full">
-              Create Organization
-            </Button>
-          </form>
+        <div className="dashboard__grid-layout">
+          <div className="lg:col-span-2">
+            {showCreateForm ? (
+              <div className="card card--padded">
+                <h3 className="dashboard__recent-item-title" style={{ marginBottom: '1.5rem' }}>Create New Organization</h3>
+                <form onSubmit={handleCreateOrganization} className="auth__fields">
+                  <div className="organization__form-group">
+                    <label className="label">Organization Name</label>
+                    <Input 
+                      placeholder="e.g. TaughtCode Team" 
+                      value={orgName} 
+                      onChange={(e) => setOrgName(e.target.value)} 
+                      required
+                    />
+                  </div>
+                  <div className="organization__form-group">
+                    <label className="label">Description (Optional)</label>
+                    <Input 
+                      placeholder="Tell us about your organization" 
+                      value={orgDescription} 
+                      onChange={(e) => setOrgDescription(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                    <Button type="submit" variant="primary" className="btn--full">
+                      Confirm & Create
+                    </Button>
+                    <Button type="button" variant="secondary" onClick={() => setShowCreateForm(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <div className="card dashboard__recent">
+                <div className="dashboard__recent-header">
+                  <h3>Available Organizations</h3>
+                  <Button variant="primary" style={{ padding: '0.5rem 1rem', height: 'auto' }} onClick={() => setShowCreateForm(true)}>
+                    + New Organization
+                  </Button>
+                </div>
+                <div className="dashboard__recent-list">
+                  {allOrganizations.length > 0 ? (
+                    allOrganizations.map((org, i) => (
+                      <div key={i} className="dashboard__recent-item">
+                        <div className="dashboard__recent-item-info">
+                          <div className="dashboard__recent-item-title">{org.name}</div>
+                          <div className="dashboard__recent-item-meta">
+                            <span>{org.type}</span>
+                            <span className="dot" />
+                            <span>{org.members?.length || 0} Members</span>
+                          </div>
+                        </div>
+                        <Button variant="secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>
+                          Request Access
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '3rem', textAlign: 'center' }}>
+                      <p style={{ color: '#737373', marginBottom: '1.5rem' }}>No organizations have been created yet.</p>
+                      <Button variant="primary" onClick={() => setShowCreateForm(true)}>Create the first one</Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
+  // View 2: User has an organization, show its settings
   return (
     <div className="organization">
       <div className="dashboard__title">

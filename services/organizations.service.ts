@@ -25,6 +25,13 @@ export interface OrganizationData {
 }
 
 export const organizationsService = {
+  list: (token: string) => {
+    return apiFetch<{ success: boolean; data: OrganizationData[] }>('/organizations', {
+      method: 'GET',
+      token,
+    });
+  },
+
   create: (data: { name: string; type?: string; description?: string }, token: string) => {
     return apiFetch<{ success: boolean; data: OrganizationData }>('/organizations', {
       method: 'POST',
