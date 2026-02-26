@@ -10,6 +10,7 @@ import { primaryNavItems, secondaryNavItems } from '@/config/adminNav';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -26,6 +27,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => unsubscribe();
   }, [router]);
 
+  // Close sidebar on path change (mobile)
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
+
   if (loading) return null;
 
   // Do not wrap login page in dashboard layout
@@ -38,13 +44,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="dashboard">
       
+      {/* Mobile Sidebar Overlay */}
+      <div 
+        className={`dashboard__sidebar-overlay ${isSidebarOpen ? 'dashboard__sidebar-overlay--open' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
       {/* --- Sidebar --- */}
-      <aside className="dashboard__sidebar">
+      <aside className={`dashboard__sidebar ${isSidebarOpen ? 'dashboard__sidebar--open' : ''}`}>
         {/* Logo */}
         <div className="dashboard__logo">
           <Link href="/admin" style={{ textDecoration: 'none', color: 'inherit' }}>
             <h1>TaughtCode<span>.</span></h1>
           </Link>
+          <button className="dashboard__sidebar-close" onClick={() => setIsSidebarOpen(false)}>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: '1.5rem' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
 
         {/* Navigation */}
@@ -96,15 +111,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         
         {/* Header */}
         <header className="dashboard__header">
-          <div></div>
+          <button className="dashboard__menu-toggle" onClick={() => setIsSidebarOpen(true)}>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ width: '1.5rem' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+          
           <div className="dashboard__header-actions">
             <Link href="/" className="btn btn--secondary">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              View Site
+              <span>View Site</span>
             </Link>
             <button className="btn btn--primary">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-              New Draft
+              <span>New Draft</span>
             </button>
           </div>
         </header>

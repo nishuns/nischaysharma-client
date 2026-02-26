@@ -223,11 +223,11 @@ export default function OrganizationPage() {
                     />
                   </div>
                   {error && <p className="auth__error" style={{ marginBottom: '1rem' }}>{error}</p>}
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <div className="organization__actions">
                     <Button type="submit" variant="primary" className="btn--full" disabled={actionLoading}>
                       {actionLoading ? 'Creating...' : 'Confirm & Create'}
                     </Button>
-                    <Button type="button" variant="secondary" onClick={() => setShowCreateForm(false)}>
+                    <Button type="button" variant="secondary" className="btn--full" onClick={() => setShowCreateForm(false)}>
                       Cancel
                     </Button>
                   </div>
@@ -238,7 +238,7 @@ export default function OrganizationPage() {
                 <div className="dashboard__recent-header">
                   <h3>Available Organizations</h3>
                   <Button variant="primary" style={{ padding: '0.5rem 1rem', height: 'auto' }} onClick={() => setShowCreateForm(true)}>
-                    + New Organization
+                    + New
                   </Button>
                 </div>
                 <div className="dashboard__recent-list">
@@ -260,11 +260,11 @@ export default function OrganizationPage() {
                             onClick={() => handleEnterWorkspace(org.id!)}
                             disabled={actionLoading}
                           >
-                            Enter Workspace
+                            Enter
                           </Button>
                         ) : (
                           <Button variant="secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem' }}>
-                            Request Access
+                            Request
                           </Button>
                         )}
                       </div>
@@ -322,11 +322,11 @@ export default function OrganizationPage() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                  <Button type="submit" variant="primary" disabled={actionLoading}>
+                <div className="organization__actions">
+                  <Button type="submit" variant="primary" className="btn--full" disabled={actionLoading}>
                     {actionLoading ? 'Adding...' : 'Add Member'}
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => setShowAddMember(false)}>
+                  <Button type="button" variant="secondary" className="btn--full" onClick={() => setShowAddMember(false)}>
                     Cancel
                   </Button>
                 </div>
@@ -356,11 +356,11 @@ export default function OrganizationPage() {
                     onChange={(e) => setNewClientApis(e.target.value)}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                  <Button type="submit" variant="primary" disabled={actionLoading}>
+                <div className="organization__actions">
+                  <Button type="submit" variant="primary" className="btn--full" disabled={actionLoading}>
                     {actionLoading ? 'Whitelisting...' : 'Add Client'}
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => setShowAddClient(false)}>
+                  <Button type="button" variant="secondary" className="btn--full" onClick={() => setShowAddClient(false)}>
                     Cancel
                   </Button>
                 </div>
@@ -385,7 +385,7 @@ export default function OrganizationPage() {
                       <span>Joined {new Date(member.addedAt || '').toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <span className={`badge badge--${member.role === 'admin' ? 'published' : 'draft'}`}>
                       {member.role}
                     </span>
@@ -415,7 +415,7 @@ export default function OrganizationPage() {
                     </div>
                     <button 
                       className="btn btn--ghost" 
-                      style={{ color: '#ff6b6b' }}
+                      style={{ color: '#ff6b6b', padding: '0.5rem' }}
                       onClick={async () => {
                         if (confirm('Are you sure?')) {
                           const token = await auth.currentUser?.getIdToken();
@@ -452,9 +452,9 @@ export default function OrganizationPage() {
                   <label className="label">Description</label>
                   <Input value={orgDescription} onChange={(e) => setOrgDescription(e.target.value)} />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <div className="organization__actions">
                   <Button type="submit" variant="primary" className="btn--full">Save</Button>
-                  <Button type="button" variant="secondary" onClick={() => setShowEditOrg(false)}>Cancel</Button>
+                  <Button type="button" variant="secondary" className="btn--full" onClick={() => setShowEditOrg(false)}>Cancel</Button>
                 </div>
               </form>
             </div>

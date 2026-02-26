@@ -19,8 +19,12 @@
 
   &__actions
     display: flex
+    flex-direction: column
     gap: $spacing-sm
     margin-top: $spacing-lg
+    
+    @media (min-width: 640px)
+      flex-direction: row
 
 .stat-group
   margin-bottom: $spacing-md
