@@ -49,6 +49,8 @@ export default function LinkedInComposer({
   const [imagePreview, setImagePreview] = useState(initialImageUrl);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [needsReconnect, setNeedsReconnect] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
 
   useEffect(() => {
@@ -175,9 +177,29 @@ export default function LinkedInComposer({
         setOpen(false);
       }
     } catch (error) {
-      toast.error(`LinkedIn publish failed: ${(error as Error).message}`);
+      const message = (error as Error).message;
+      if (/reconnect linkedin|token.*expired|authorization expired/i.test(message)) {
+        setNeedsReconnect(true);
+        toast.error('Your LinkedIn session expired. Reconnect once, then publish again.');
+      } else {
+        toast.error(`LinkedIn publish failed: ${message}`);
+      }
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const reconnectLinkedIn = async () => {
+    try {
+      setReconnecting(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+      const response = await integrationsService.initiateAuth('linkedin', token);
+      if (!response.success || !response.authUrl) throw new Error('Could not start LinkedIn authorization');
+      window.location.href = response.authUrl;
+    } catch (error) {
+      toast.error(`LinkedIn reconnect failed: ${(error as Error).message}`);
+      setReconnecting(false);
     }
   };
 
@@ -233,6 +255,12 @@ export default function LinkedInComposer({
 
             <div className="linkedin-composer__workspace">
               <div className="linkedin-composer__editor">
+                {needsReconnect && (
+                  <div className="linkedin-composer__reauth" role="alert">
+                    <i className="ph ph-warning-circle" />
+                    <span><strong>LinkedIn session expired</strong><small>Reconnect your account, then return here to publish.</small></span>
+                  </div>
+                )}
                 <div className="linkedin-composer__field-heading">
                   <label htmlFor="linkedin-commentary">Post commentary</label>
                   <button type="button" onClick={generate} disabled={generating}>
@@ -315,8 +343,10 @@ export default function LinkedInComposer({
 
             <footer className="linkedin-composer__footer">
               <span>{format === 'document' ? `${slides.length} editable slides · published as PDF` : format === 'image' ? 'Native LinkedIn image post' : 'Text and article link'}</span>
-              <button type="button" onClick={publish} disabled={!canPublish || publishing}>
-                {publishing ? <><i className="ph ph-spinner linkedin-spin" /> Publishing…</> : <><i className="ph ph-linkedin-logo" /> Publish to LinkedIn</>}
+              <button type="button" onClick={needsReconnect ? reconnectLinkedIn : publish} disabled={needsReconnect ? reconnecting : !canPublish || publishing}>
+                {needsReconnect
+                  ? reconnecting ? <><i className="ph ph-spinner linkedin-spin" /> Reconnecting…</> : <><i className="ph ph-arrow-clockwise" /> Reconnect LinkedIn</>
+                  : publishing ? <><i className="ph ph-spinner linkedin-spin" /> Publishing…</> : <><i className="ph ph-linkedin-logo" /> Publish to LinkedIn</>}
               </button>
             </footer>
           </section>

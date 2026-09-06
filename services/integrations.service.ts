@@ -2,6 +2,7 @@ import { apiFetch } from './apiClient';
 
 export interface Integration {
   connected: boolean;
+  requiresReconnect?: boolean;
   accountName?: string;
   username?: string;
   urn?: string;
