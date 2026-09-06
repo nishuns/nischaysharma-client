@@ -48,6 +48,7 @@ export default function LinkedInComposer({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState(initialImageUrl);
   const [generating, setGenerating] = useState(false);
+  const [generatingSlide, setGeneratingSlide] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [needsReconnect, setNeedsReconnect] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
@@ -146,6 +147,71 @@ export default function LinkedInComposer({
     setImagePreview(URL.createObjectURL(file));
   };
 
+  const convertToSlideJpeg = async (file: File) => {
+    if (!file.type.startsWith('image/')) throw new Error('Please choose an image file');
+    if (file.size > 20 * 1024 * 1024) throw new Error('Image must be smaller than 20 MB');
+
+    const bitmap = await createImageBitmap(file);
+    const maximumDimension = 1800;
+    const scale = Math.min(1, maximumDimension / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('This browser could not prepare the slide image');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((value) => value ? resolve(value) : reject(new Error('Could not convert the slide image')), 'image/jpeg', 0.88);
+    });
+    return new File([blob], 'slide-image.jpg', { type: 'image/jpeg' });
+  };
+
+  const setSlideImage = async (index: number, file: File) => {
+    const jpeg = await convertToSlideJpeg(file);
+    const preview = URL.createObjectURL(jpeg);
+    setSlides((current) => current.map((slide, slideIndex) => (
+      slideIndex === index ? { ...slide, imageFile: jpeg, imagePreview: preview } : slide
+    )));
+  };
+
+  const selectSlideImage = async (index: number, file?: File) => {
+    if (!file) return;
+    try {
+      await setSlideImage(index, file);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
+  const generateSlideImage = async (index: number) => {
+    const slide = slides[index];
+    if (!slide) return;
+    try {
+      setGeneratingSlide(index);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+      const response = await integrationsService.generateLinkedInImage({
+        title,
+        description,
+        type,
+        purpose: 'slide',
+        slideHeadline: slide.headline,
+        slideBody: slide.body,
+        imagePrompt: slide.imagePrompt
+      }, token);
+      const imageResponse = await fetch(response.data.url);
+      if (!imageResponse.ok) throw new Error('The generated slide image could not be downloaded');
+      const blob = await imageResponse.blob();
+      await setSlideImage(index, new File([blob], 'generated-slide-image', { type: blob.type || response.data.mimeType }));
+      toast.success(`Slide ${index + 1} image generated`);
+    } catch (error) {
+      toast.error(`Slide image generation failed: ${(error as Error).message}`);
+    } finally {
+      setGeneratingSlide(null);
+    }
+  };
+
   const loadCurrentCover = async () => {
     if (!initialImageUrl) throw new Error('This content does not have a cover image');
     const response = await fetch(initialImageUrl);
@@ -203,7 +269,7 @@ export default function LinkedInComposer({
     }
   };
 
-  const updateSlide = (index: number, field: keyof LinkedInSlide, value: string) => {
+  const updateSlide = (index: number, field: 'headline' | 'body' | 'imagePrompt', value: string) => {
     setSlides((current) => current.map((slide, slideIndex) => (
       slideIndex === index ? { ...slide, [field]: value } : slide
     )));
@@ -309,6 +375,18 @@ export default function LinkedInComposer({
                         <div>
                           <input value={slide.headline} maxLength={90} onChange={(event) => updateSlide(index, 'headline', event.target.value)} aria-label={`Slide ${index + 1} headline`} />
                           <textarea value={slide.body} maxLength={420} onChange={(event) => updateSlide(index, 'body', event.target.value)} aria-label={`Slide ${index + 1} body`} />
+                          <input value={slide.imagePrompt || ''} maxLength={1000} onChange={(event) => updateSlide(index, 'imagePrompt', event.target.value)} aria-label={`Slide ${index + 1} visual direction`} placeholder="Visual direction for AI (optional)" />
+                          <div className="linkedin-slide-editor__media">
+                            {slide.imagePreview && <img src={slide.imagePreview} alt={slide.altText || `Slide ${index + 1} visual`} />}
+                            <button type="button" onClick={() => generateSlideImage(index)} disabled={generatingSlide !== null}>
+                              <i className={`ph ${generatingSlide === index ? 'ph-spinner linkedin-spin' : 'ph-magic-wand'}`} />
+                              {slide.imageFile ? 'Regenerate' : 'Generate image'}
+                            </button>
+                            <label>
+                              <i className="ph ph-upload-simple" /> Upload
+                              <input type="file" accept="image/*" onChange={(event) => selectSlideImage(index, event.target.files?.[0])} />
+                            </label>
+                          </div>
                         </div>
                         <div className="linkedin-slide-editor__actions">
                           <button type="button" disabled={index === 0} onClick={() => setSlides((current) => current.map((item, itemIndex) => itemIndex === index - 1 ? current[index] : itemIndex === index ? current[index - 1] : item))} aria-label="Move slide up"><i className="ph ph-arrow-up" /></button>
@@ -329,7 +407,14 @@ export default function LinkedInComposer({
                   {format === 'document' && (
                     <div className="linkedin-preview-deck">
                       {(slides.length ? slides : [{ headline: 'Your slide deck', body: 'Generate with AI to create an editable visual story.' }]).slice(0, 3).map((slide, index) => (
-                        <div key={index} style={{ '--slide-index': index } as React.CSSProperties}>
+                        <div
+                          key={index}
+                          className={slide.imagePreview ? 'has-image' : ''}
+                          style={{
+                            '--slide-index': index,
+                            ...(slide.imagePreview ? { backgroundImage: `linear-gradient(180deg, rgba(8, 13, 23, .08), rgba(8, 13, 23, .94)), url(${slide.imagePreview})` } : {})
+                          } as React.CSSProperties}
+                        >
                           <small>{String(index + 1).padStart(2, '0')}</small>
                           <strong>{slide.headline}</strong>
                           <p>{slide.body}</p>

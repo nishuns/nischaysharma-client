@@ -21,6 +21,9 @@ export interface LinkedInSlide {
   headline: string;
   body: string;
   altText?: string;
+  imagePrompt?: string;
+  imageFile?: File;
+  imagePreview?: string;
 }
 
 export interface LinkedInPostPlan {
@@ -88,7 +91,15 @@ export const integrationsService = {
   /**
    * Generate and store a portrait image for a LinkedIn image post.
    */
-  generateLinkedInImage: (data: { title: string; description?: string; type: 'article' | 'book' }, token: string) => {
+  generateLinkedInImage: (data: {
+    title: string;
+    description?: string;
+    type: 'article' | 'book';
+    purpose?: 'post' | 'slide';
+    slideHeadline?: string;
+    slideBody?: string;
+    imagePrompt?: string;
+  }, token: string) => {
     return apiFetch<{ success: boolean; data: { url: string; mimeType: string } }>('/integrations/ai-post/image', {
       method: 'POST',
       token,
@@ -155,7 +166,19 @@ export const integrationsService = {
     body.set('title', data.title);
     if (data.url) body.set('url', data.url);
     if (data.altText) body.set('altText', data.altText);
-    if (data.slides) body.set('slides', JSON.stringify(data.slides));
+    if (data.slides) {
+      const imageIndexes: number[] = [];
+      const serializableSlides = data.slides.map((slide, index) => {
+        if (slide.imageFile) {
+          body.append('slideImages', slide.imageFile);
+          imageIndexes.push(index);
+        }
+        const { imageFile: _imageFile, imagePreview: _imagePreview, ...serializable } = slide;
+        return serializable;
+      });
+      body.set('slides', JSON.stringify(serializableSlides));
+      body.set('slideImageIndexes', JSON.stringify(imageIndexes));
+    }
     if (data.media) body.set('media', data.media);
 
     return apiFetch<{ success: boolean; data: { id?: string } }>('/integrations/linkedin/post', {

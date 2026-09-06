@@ -348,6 +348,35 @@
     textarea
       min-height: 3.6rem
       resize: vertical
+  &__media
+    min-height: 2.2rem
+    display: flex
+    align-items: center
+    gap: .4rem
+    flex-wrap: wrap
+    img
+      width: 4.2rem
+      height: 2.4rem
+      object-fit: cover
+      border-radius: .4rem
+    button, label
+      min-height: 2rem
+      padding: .4rem .55rem
+      display: inline-flex
+      align-items: center
+      gap: .3rem
+      border: 1px solid #dfe3e8
+      border-radius: .45rem
+      background: #f7f8fa
+      color: #394150
+      font-size: .58rem
+      font-weight: 800
+      cursor: pointer
+    button:disabled
+      cursor: wait
+      opacity: .5
+    input
+      display: none
   &__actions
     display: flex
     flex-direction: column
@@ -418,11 +447,15 @@
     color: #fff
     border-radius: .55rem
     background: linear-gradient(145deg, #10192a, #102f40)
+    background-position: center
+    background-size: cover
     border: 1px solid rgba(255, 255, 255, .14)
     transform: translate(calc(var(--slide-index) * 7px), calc(var(--slide-index) * -7px)) rotate(calc(var(--slide-index) * 1.2deg))
     z-index: calc(5 - var(--slide-index))
     &:nth-child(n+2)
       opacity: .6
+    &.has-image
+      text-shadow: 0 2px 12px rgba(0, 0, 0, .72)
     small
       color: #42d8c4
       font-size: .6rem
