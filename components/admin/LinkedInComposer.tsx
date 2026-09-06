@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import {
@@ -42,6 +43,11 @@ export default function LinkedInComposer({
   const [imagePreview, setImagePreview] = useState(initialImageUrl);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -157,7 +163,7 @@ export default function LinkedInComposer({
         <i className="ph ph-arrow-up-right" />
       </button>
 
-      {open && (
+      {open && portalReady && createPortal((
         <div className="linkedin-composer" role="dialog" aria-modal="true" aria-label="LinkedIn post studio">
           <button className="linkedin-composer__backdrop" type="button" aria-label="Close" onClick={() => setOpen(false)} />
           <section className="linkedin-composer__panel">
@@ -271,7 +277,7 @@ export default function LinkedInComposer({
             </footer>
           </section>
         </div>
-      )}
+      ), document.body)}
     </>
   );
 }
