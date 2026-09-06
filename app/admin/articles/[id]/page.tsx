@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { articlesService } from '@/services/articles.service';
@@ -16,6 +15,7 @@ import { useDialogStore } from '@/store/useDialogStore';
 import { integrationsService, IntegrationsList } from '@/services/integrations.service';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarkdownView from '@/components/ui/MarkdownView';
+import LinkedInComposer from '@/components/admin/LinkedInComposer';
 
 export default function ArticleEditPage() {
   const { id } = useParams() as { id: string };
@@ -24,8 +24,6 @@ export default function ArticleEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [generatingPost, setGeneratingPost] = useState(false);
   const [isRegeneratingBackground, setIsRegeneratingBackground] = useState(false);
   const [regenerationJobId, setRegenerationJobId] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationsList>({});
@@ -34,7 +32,6 @@ export default function ArticleEditPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [backgroundImage, setBackgroundImage] = useState('');
-  const [linkedinPostText, setLinkedinPostText] = useState('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { openDialog } = useDialogStore();
@@ -68,7 +65,6 @@ export default function ArticleEditPage() {
         setDescription(response.data.description);
         setContent(response.data.content);
         setBackgroundImage(response.data.backgroundImage || '');
-        setLinkedinPostText(`🚀 Just published a new article: "${response.data.title}"\n\n${response.data.description || ''}\n\nRead more on TaughtCode.`);
       }
     } catch (err: any) {
       setError(err.message);
@@ -123,54 +119,6 @@ export default function ArticleEditPage() {
         }
       }
     });
-  };
-
-  const handleShareToLinkedIn = async () => {
-    if (!article) return;
-    try {
-      setSharing(true);
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
-      const url = `${window.location.origin}/articles/${article.slug}`;
-
-      const response = await integrationsService.shareToLinkedIn({
-        text: linkedinPostText,
-        url: url,
-        title: title
-      }, token);
-
-      if (response.success) {
-        toast.success('Successfully shared to LinkedIn!');
-      }
-    } catch (err: any) {
-      toast.error('Failed to share to LinkedIn: ' + err.message);
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  const handleGenerateAIPost = async () => {
-    try {
-      setGeneratingPost(true);
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const response = await integrationsService.generateAIPost({
-        title,
-        description,
-        type: 'article'
-      }, token);
-
-      if (response.success) {
-        setLinkedinPostText(response.data.text);
-        toast.success('AI post generated!');
-      }
-    } catch (err: any) {
-      toast.error('AI generation failed: ' + err.message);
-    } finally {
-      setGeneratingPost(false);
-    }
   };
 
   const handleRegenerateBackgroundImage = async () => {
@@ -314,43 +262,14 @@ export default function ArticleEditPage() {
                   <div className="card card--padded">
                     <h3 className="label" style={{ marginBottom: '1.5rem' }}>Social Distribution</h3>
                     
-                    {!integrations.linkedin?.connected ? (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                        Connect your LinkedIn account in <Link href="/admin/profile" style={{ textDecoration: 'underline' }}>Profile Settings</Link> to share your articles directly.
-                      </p>
-                    ) : (
-                      <div className="organization__form-group">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <label className="label" style={{ margin: 0 }}>LinkedIn Post Content</label>
-                          <button 
-                            onClick={handleGenerateAIPost} 
-                            disabled={generatingPost}
-                            style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-                          >
-                            {generatingPost ? <i className="ph ph-spinner animate-spin" /> : <i className="ph ph-sparkle" />}
-                            Generate with AI
-                          </button>
-                        </div>
-                        <textarea 
-                          className="input" 
-                          style={{ height: '120px', resize: 'vertical', padding: '0.75rem', fontSize: '0.8rem' }}
-                          value={linkedinPostText}
-                          onChange={(e) => setLinkedinPostText(e.target.value)}
-                          placeholder="What would you like to say on LinkedIn?"
-                        />
-                        <Button 
-                          variant="secondary" 
-                          className="btn--full"
-                          style={{ marginTop: '1rem', background: '#0077b5', color: '#fff', border: 'none' }}
-                          onClick={handleShareToLinkedIn}
-                          disabled={sharing}
-                          loading={sharing}
-                        >
-                          <i className="ph ph-linkedin-logo" style={{ marginRight: '0.4rem' }} />
-                          <span>Share to LinkedIn</span>
-                        </Button>
-                      </div>
-                    )}
+                    <LinkedInComposer
+                      connected={Boolean(integrations.linkedin?.connected)}
+                      title={title}
+                      description={description}
+                      type="article"
+                      sourcePath={`/articles/${article.slug}`}
+                      initialImageUrl={backgroundImage}
+                    />
                   </div>
                 )}
 

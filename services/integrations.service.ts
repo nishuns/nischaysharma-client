@@ -14,6 +14,23 @@ export interface IntegrationsList {
   linkedin?: Integration;
 }
 
+export type LinkedInPostFormat = 'text' | 'image' | 'document';
+
+export interface LinkedInSlide {
+  headline: string;
+  body: string;
+  altText?: string;
+}
+
+export interface LinkedInPostPlan {
+  format: LinkedInPostFormat;
+  commentary: string;
+  text: string;
+  slides: LinkedInSlide[];
+  imageAltText?: string;
+  hashtags?: string[];
+}
+
 export const integrationsService = {
   /**
    * List all active integrations
@@ -59,8 +76,8 @@ export const integrationsService = {
   /**
    * Generate an AI-powered social media post
    */
-  generateAIPost: (data: { title: string; description?: string; type: 'article' | 'book' }, token: string) => {
-    return apiFetch<{ success: boolean; data: any }>('/integrations/ai-post', {
+  generateAIPost: (data: { title: string; description?: string; type: 'article' | 'book'; format: LinkedInPostFormat }, token: string) => {
+    return apiFetch<{ success: boolean; data: LinkedInPostPlan }>('/integrations/ai-post', {
       method: 'POST',
       token,
       body: data
@@ -108,6 +125,31 @@ export const integrationsService = {
       method: 'POST',
       token,
       body: data
+    });
+  },
+
+  publishLinkedInPost: (data: {
+    commentary: string;
+    format: LinkedInPostFormat;
+    title: string;
+    url?: string;
+    altText?: string;
+    slides?: LinkedInSlide[];
+    media?: File;
+  }, token: string) => {
+    const body = new FormData();
+    body.set('commentary', data.commentary);
+    body.set('format', data.format);
+    body.set('title', data.title);
+    if (data.url) body.set('url', data.url);
+    if (data.altText) body.set('altText', data.altText);
+    if (data.slides) body.set('slides', JSON.stringify(data.slides));
+    if (data.media) body.set('media', data.media);
+
+    return apiFetch<{ success: boolean; data: { id?: string } }>('/integrations/linkedin/post', {
+      method: 'POST',
+      token,
+      body
     });
   }
 };

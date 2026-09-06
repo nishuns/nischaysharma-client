@@ -1,0 +1,277 @@
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { auth } from '@/lib/firebase';
+import {
+  integrationsService,
+  LinkedInPostFormat,
+  LinkedInSlide
+} from '@/services/integrations.service';
+import { toast } from 'sonner';
+
+interface LinkedInComposerProps {
+  connected: boolean;
+  title: string;
+  description?: string;
+  type: 'article' | 'book';
+  sourcePath: string;
+  initialImageUrl?: string;
+}
+
+const formatOptions: { value: LinkedInPostFormat; label: string; icon: string; detail: string }[] = [
+  { value: 'text', label: 'Text', icon: 'ph-text-t', detail: 'Caption and link' },
+  { value: 'image', label: 'Image', icon: 'ph-image', detail: 'Cover or upload' },
+  { value: 'document', label: 'Slides', icon: 'ph-cards-three', detail: 'Swipeable PDF' }
+];
+
+export default function LinkedInComposer({
+  connected,
+  title,
+  description = '',
+  type,
+  sourcePath,
+  initialImageUrl = ''
+}: LinkedInComposerProps) {
+  const [open, setOpen] = useState(false);
+  const [format, setFormat] = useState<LinkedInPostFormat>('document');
+  const [commentary, setCommentary] = useState(`I just published “${title}”.\n\n${description}`.trim());
+  const [slides, setSlides] = useState<LinkedInSlide[]>([]);
+  const [altText, setAltText] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState(initialImageUrl);
+  const [generating, setGenerating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  const canPublish = useMemo(() => {
+    if (!commentary.trim()) return false;
+    if (format === 'image') return Boolean(imageFile || initialImageUrl);
+    if (format === 'document') {
+      return slides.length >= 2 && slides.every((slide) => slide.headline.trim() && slide.body.trim());
+    }
+    return true;
+  }, [commentary, format, imageFile, initialImageUrl, slides]);
+
+  const generate = async () => {
+    try {
+      setGenerating(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+      const response = await integrationsService.generateAIPost({ title, description, type, format }, token);
+      if (response.success) {
+        setCommentary(response.data.commentary || response.data.text);
+        setSlides(response.data.slides || []);
+        setAltText(response.data.imageAltText || '');
+        toast.success(format === 'document' ? 'Slide plan generated' : 'LinkedIn copy generated');
+      }
+    } catch (error) {
+      toast.error(`AI generation failed: ${(error as Error).message}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const selectImage = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Image must be smaller than 20 MB');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const loadCurrentCover = async () => {
+    if (!initialImageUrl) throw new Error('This content does not have a cover image');
+    const response = await fetch(initialImageUrl);
+    if (!response.ok) throw new Error('The current cover could not be downloaded; upload it manually instead');
+    const blob = await response.blob();
+    if (!blob.type.startsWith('image/')) throw new Error('The current cover is not a supported image');
+    return new File([blob], 'content-cover', { type: blob.type });
+  };
+
+  const publish = async () => {
+    if (!canPublish) return;
+    try {
+      setPublishing(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+      const media = format === 'image' ? (imageFile || await loadCurrentCover()) : undefined;
+      const url = `${window.location.origin}${sourcePath}`;
+      const response = await integrationsService.publishLinkedInPost({
+        commentary: commentary.trim(),
+        format,
+        title,
+        url,
+        altText,
+        slides: format === 'document' ? slides : undefined,
+        media
+      }, token);
+      if (response.success) {
+        toast.success('Published to LinkedIn');
+        setOpen(false);
+      }
+    } catch (error) {
+      toast.error(`LinkedIn publish failed: ${(error as Error).message}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const updateSlide = (index: number, field: keyof LinkedInSlide, value: string) => {
+    setSlides((current) => current.map((slide, slideIndex) => (
+      slideIndex === index ? { ...slide, [field]: value } : slide
+    )));
+  };
+
+  if (!connected) {
+    return (
+      <p className="linkedin-launcher__empty">
+        Connect LinkedIn in <Link href="/admin/profile">Profile Settings</Link> to publish posts.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <button className="linkedin-launcher" type="button" onClick={() => setOpen(true)}>
+        <span className="linkedin-launcher__icon"><i className="ph ph-linkedin-logo" /></span>
+        <span><strong>Create LinkedIn post</strong><small>Text, image, or swipeable slides</small></span>
+        <i className="ph ph-arrow-up-right" />
+      </button>
+
+      {open && (
+        <div className="linkedin-composer" role="dialog" aria-modal="true" aria-label="LinkedIn post studio">
+          <button className="linkedin-composer__backdrop" type="button" aria-label="Close" onClick={() => setOpen(false)} />
+          <section className="linkedin-composer__panel">
+            <header className="linkedin-composer__header">
+              <div>
+                <span className="linkedin-composer__eyebrow">LinkedIn Studio</span>
+                <h2>Turn this {type} into a post</h2>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close composer"><i className="ph ph-x" /></button>
+            </header>
+
+            <div className="linkedin-composer__formats" role="tablist" aria-label="Post format">
+              {formatOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={format === option.value}
+                  className={format === option.value ? 'is-active' : ''}
+                  onClick={() => setFormat(option.value)}
+                >
+                  <i className={`ph ${option.icon}`} />
+                  <span><strong>{option.label}</strong><small>{option.detail}</small></span>
+                </button>
+              ))}
+            </div>
+
+            <div className="linkedin-composer__workspace">
+              <div className="linkedin-composer__editor">
+                <div className="linkedin-composer__field-heading">
+                  <label htmlFor="linkedin-commentary">Post commentary</label>
+                  <button type="button" onClick={generate} disabled={generating}>
+                    <i className={`ph ${generating ? 'ph-spinner linkedin-spin' : 'ph-sparkle'}`} />
+                    {generating ? 'Generating…' : 'Generate with AI'}
+                  </button>
+                </div>
+                <textarea
+                  id="linkedin-commentary"
+                  value={commentary}
+                  maxLength={3000}
+                  onChange={(event) => setCommentary(event.target.value)}
+                  placeholder="What should your network know?"
+                />
+                <span className="linkedin-composer__counter">{commentary.length} / 3000</span>
+
+                {format === 'image' && (
+                  <div className="linkedin-composer__media-editor">
+                    <label className="linkedin-composer__upload">
+                      <i className="ph ph-upload-simple" />
+                      <span><strong>{imageFile ? imageFile.name : 'Choose an image'}</strong><small>PNG, JPG, GIF — up to 20 MB</small></span>
+                      <input type="file" accept="image/*" onChange={(event) => selectImage(event.target.files?.[0])} />
+                    </label>
+                    {initialImageUrl && !imageFile && <span className="linkedin-composer__cover-note"><i className="ph ph-check-circle" /> Current cover selected</span>}
+                    <label htmlFor="linkedin-alt-text">Image alt text</label>
+                    <input id="linkedin-alt-text" value={altText} maxLength={300} onChange={(event) => setAltText(event.target.value)} placeholder="Describe the image for accessibility" />
+                  </div>
+                )}
+
+                {format === 'document' && (
+                  <div className="linkedin-composer__slides-editor">
+                    <div className="linkedin-composer__field-heading">
+                      <label>Slides</label>
+                      <button type="button" disabled={slides.length >= 10} onClick={() => setSlides([...slides, { headline: 'New idea', body: 'Add one focused takeaway.' }])}>
+                        <i className="ph ph-plus" /> Add slide
+                      </button>
+                    </div>
+                    {slides.length < 2 && <p className="linkedin-composer__hint">Generate a slide plan or add at least two slides.</p>}
+                    {slides.map((slide, index) => (
+                      <article className="linkedin-slide-editor" key={index}>
+                        <span>{String(index + 1).padStart(2, '0')}</span>
+                        <div>
+                          <input value={slide.headline} maxLength={90} onChange={(event) => updateSlide(index, 'headline', event.target.value)} aria-label={`Slide ${index + 1} headline`} />
+                          <textarea value={slide.body} maxLength={420} onChange={(event) => updateSlide(index, 'body', event.target.value)} aria-label={`Slide ${index + 1} body`} />
+                        </div>
+                        <div className="linkedin-slide-editor__actions">
+                          <button type="button" disabled={index === 0} onClick={() => setSlides((current) => current.map((item, itemIndex) => itemIndex === index - 1 ? current[index] : itemIndex === index ? current[index - 1] : item))} aria-label="Move slide up"><i className="ph ph-arrow-up" /></button>
+                          <button type="button" disabled={slides.length <= 2} onClick={() => setSlides((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label="Delete slide"><i className="ph ph-trash" /></button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <aside className="linkedin-composer__preview">
+                <span>Preview</span>
+                <div className="linkedin-preview-card">
+                  <div className="linkedin-preview-card__profile"><span>N</span><div><strong>Nischay Sharma</strong><small>Now · Public</small></div></div>
+                  <p>{commentary || 'Your post will appear here.'}</p>
+                  {format === 'image' && imagePreview && <img src={imagePreview} alt={altText || 'LinkedIn post preview'} />}
+                  {format === 'document' && (
+                    <div className="linkedin-preview-deck">
+                      {(slides.length ? slides : [{ headline: 'Your slide deck', body: 'Generate with AI to create an editable visual story.' }]).slice(0, 3).map((slide, index) => (
+                        <div key={index} style={{ '--slide-index': index } as React.CSSProperties}>
+                          <small>{String(index + 1).padStart(2, '0')}</small>
+                          <strong>{slide.headline}</strong>
+                          <p>{slide.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </div>
+
+            <footer className="linkedin-composer__footer">
+              <span>{format === 'document' ? `${slides.length} editable slides · published as PDF` : format === 'image' ? 'Native LinkedIn image post' : 'Text and article link'}</span>
+              <button type="button" onClick={publish} disabled={!canPublish || publishing}>
+                {publishing ? <><i className="ph ph-spinner linkedin-spin" /> Publishing…</> : <><i className="ph ph-linkedin-logo" /> Publish to LinkedIn</>}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+    </>
+  );
+}

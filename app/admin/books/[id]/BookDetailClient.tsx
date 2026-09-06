@@ -12,6 +12,7 @@ import AdminLoading from '@/app/admin/loading';
 import TiptapEditor from '@/components/editor/TiptapEditor';
 import { toast } from 'sonner';
 import { integrationsService, IntegrationsList } from '@/services/integrations.service';
+import LinkedInComposer from '@/components/admin/LinkedInComposer';
 
 interface BookDetailClientProps {
   bookId: string;
@@ -47,9 +48,6 @@ export default function BookDetailClient({ bookId }: BookDetailClientProps) {
   const [isAttachingThread, setIsAttachingThread] = useState(false);
 
   // Integrations state
-  const [sharing, setSharing] = useState(false);
-  const [generatingPost, setGeneratingPost] = useState(false);
-  const [linkedinPostText, setLinkedinPostText] = useState('');
   const [integrations, setIntegrations] = useState<IntegrationsList>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingPage, setIsCreatingPage] = useState(false);
@@ -115,7 +113,6 @@ export default function BookDetailClient({ bookId }: BookDetailClientProps) {
         
         setBook(data);
         setSelectedThreadId(data.threadId || 'none');
-        setLinkedinPostText(`📚 Just published a new technical collection: "${response.data.title}"\n\n${response.data.description || ''}\n\nExplore it on TaughtCode.`);
         
         if (response.data.type === 'paper') {
           setActiveChapterId('root');
@@ -272,55 +269,6 @@ export default function BookDetailClient({ bookId }: BookDetailClientProps) {
       }
       return newBook;
     });
-  };
-
-  const handleShareToLinkedIn = async () => {
-    if (!book) return;
-    try {
-      setSharing(true);
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) throw new Error('No authentication token');
-
-      const url = `${window.location.origin}/books/${book.id}`;
-
-      const response = await integrationsService.shareToLinkedIn({
-        text: linkedinPostText,
-        url: url,
-        title: book.title
-      }, token);
-
-      if (response.success) {
-        toast.success('Successfully shared to LinkedIn!');
-      }
-    } catch (err) {
-      toast.error('Failed to share to LinkedIn: ' + (err as Error).message);
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  const handleGenerateAIPost = async () => {
-    if (!book) return;
-    try {
-      setGeneratingPost(true);
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-
-      const response = await integrationsService.generateAIPost({
-        title: book.title,
-        description: book.description,
-        type: 'book'
-      }, token);
-
-      if (response.success) {
-        setLinkedinPostText(response.data);
-        toast.success('AI post generated!');
-      }
-    } catch (err) {
-      toast.error('AI generation failed: ' + (err as Error).message);
-    } finally {
-      setGeneratingPost(false);
-    }
   };
 
   return (
@@ -498,42 +446,14 @@ export default function BookDetailClient({ bookId }: BookDetailClientProps) {
             <div style={{ marginTop: '2rem', padding: '0 0.5rem' }}>
               <h3 style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800, marginBottom: '1.5rem' }}>Distribution</h3>
               
-              {!integrations.linkedin?.connected ? (
-                <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                  Connect LinkedIn in profile settings to share.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="label" style={{ fontSize: '0.65rem', margin: 0 }}>LinkedIn Post</label>
-                    <button 
-                      onClick={handleGenerateAIPost} 
-                      disabled={generatingPost}
-                      style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
-                    >
-                      {generatingPost ? <i className="ph ph-spinner animate-spin" /> : <i className="ph ph-sparkle" />}
-                      AI Gen
-                    </button>
-                  </div>
-                  <textarea 
-                    className="input" 
-                    style={{ height: '100px', resize: 'vertical', padding: '0.5rem', fontSize: '0.75rem', background: '#fff' }}
-                    value={linkedinPostText}
-                    onChange={(e) => setLinkedinPostText(e.target.value)}
-                  />
-                  <Button 
-                    variant="secondary" 
-                    className="btn--full"
-                    style={{ background: '#0077b5', color: '#fff', border: 'none', fontSize: '0.7rem', height: '2.5rem' }}
-                    onClick={handleShareToLinkedIn}
-                    disabled={sharing}
-                    loading={sharing}
-                  >
-                    <i className="ph ph-linkedin-logo" style={{ marginRight: '0.4rem' }} />
-                    <span>Share Now</span>
-                  </Button>
-                </div>
-              )}
+              <LinkedInComposer
+                connected={Boolean(integrations.linkedin?.connected)}
+                title={book.title}
+                description={book.description}
+                type="book"
+                sourcePath={`/books/${book.id}`}
+                initialImageUrl={book.coverImage}
+              />
             </div>
            )}
         </aside>
