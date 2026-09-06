@@ -18,6 +18,7 @@ interface LinkedInComposerProps {
   type: 'article' | 'book';
   sourcePath: string;
   initialImageUrl?: string;
+  sourceContent?: string;
   mode?: 'modal' | 'page';
   backHref?: string;
 }
@@ -41,6 +42,7 @@ export default function LinkedInComposer({
   type,
   sourcePath,
   initialImageUrl = '',
+  sourceContent = '',
   mode = 'modal',
   backHref = '/admin/articles'
 }: LinkedInComposerProps) {
@@ -55,6 +57,7 @@ export default function LinkedInComposer({
   const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null);
+  const [generatingAllSlides, setGeneratingAllSlides] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [needsReconnect, setNeedsReconnect] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
@@ -86,6 +89,16 @@ export default function LinkedInComposer({
     return true;
   }, [commentary, format, generatedImageUrl, imageFile, initialImageUrl, slides]);
 
+  const sourceContext = useMemo(() => sourceContent
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 20000), [sourceContent]);
+
   const applyGeneratedImage = (url: string) => {
     if (!url) throw new Error('The image service did not return a preview URL');
     setImageFile(null);
@@ -96,7 +109,7 @@ export default function LinkedInComposer({
   const generateImage = async (token?: string) => {
     const authToken = token || await auth.currentUser?.getIdToken();
     if (!authToken) throw new Error('No authentication token');
-    const response = await integrationsService.generateLinkedInImage({ title, description, type }, authToken);
+    const response = await integrationsService.generateLinkedInImage({ title, description, sourceContent: sourceContext, type }, authToken);
     if (!response.success) throw new Error('Image generation failed');
     applyGeneratedImage(response.data.url);
   };
@@ -107,7 +120,7 @@ export default function LinkedInComposer({
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
       const [response] = await Promise.all([
-        integrationsService.generateAIPost({ title, description, type, format }, token),
+        integrationsService.generateAIPost({ title, description, sourceContent: sourceContext, type, format }, token),
         ...(format === 'image' ? [generateImage(token)] : [])
       ]);
       if (response.success) {
@@ -187,32 +200,71 @@ export default function LinkedInComposer({
     }
   };
 
-  const generateSlideImage = async (index: number) => {
+  const requestSlideImage = async (index: number, token: string) => {
     const slide = slides[index];
-    if (!slide) return;
+    if (!slide) throw new Error(`Slide ${index + 1} was not found`);
+    const response = await integrationsService.generateLinkedInImage({
+      title,
+      description,
+      sourceContent: sourceContext,
+      type,
+      purpose: 'slide',
+      slideHeadline: slide.headline,
+      slideBody: slide.body,
+      imagePrompt: slide.imagePrompt
+    }, token);
+    if (!response.success || !response.data?.url) {
+      throw new Error(`The image service did not return an image for slide ${index + 1}`);
+    }
+    setSlides((current) => current.map((currentSlide, slideIndex) => (
+      slideIndex === index
+        ? { ...currentSlide, imageFile: undefined, imageUrl: response.data.url, imagePreview: response.data.url }
+        : currentSlide
+    )));
+  };
+
+  const generateSlideImage = async (index: number) => {
     try {
       setGeneratingSlide(index);
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
-      const response = await integrationsService.generateLinkedInImage({
-        title,
-        description,
-        type,
-        purpose: 'slide',
-        slideHeadline: slide.headline,
-        slideBody: slide.body,
-        imagePrompt: slide.imagePrompt
-      }, token);
-      setSlides((current) => current.map((currentSlide, slideIndex) => (
-        slideIndex === index
-          ? { ...currentSlide, imageFile: undefined, imageUrl: response.data.url, imagePreview: response.data.url }
-          : currentSlide
-      )));
+      await requestSlideImage(index, token);
       toast.success(`Slide ${index + 1} image generated`);
     } catch (error) {
       toast.error(`Slide image generation failed: ${(error as Error).message}`);
     } finally {
       setGeneratingSlide(null);
+    }
+  };
+
+  const generateAllSlideImages = async () => {
+    if (!slides.length) {
+      toast.error('Generate or add slides first');
+      return;
+    }
+    try {
+      setGeneratingAllSlides(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('No authentication token');
+      let failures = 0;
+      for (let index = 0; index < slides.length; index += 1) {
+        try {
+          setGeneratingSlide(index);
+          await requestSlideImage(index, token);
+        } catch {
+          failures += 1;
+        }
+      }
+      if (failures) {
+        toast.error(`${slides.length - failures} images generated; ${failures} failed`);
+      } else {
+        toast.success(`Generated images for all ${slides.length} slides`);
+      }
+    } catch (error) {
+      toast.error(`Slide image generation failed: ${(error as Error).message}`);
+    } finally {
+      setGeneratingSlide(null);
+      setGeneratingAllSlides(false);
     }
   };
 
@@ -362,9 +414,15 @@ export default function LinkedInComposer({
                   <div className="linkedin-composer__slides-editor">
                     <div className="linkedin-composer__field-heading">
                       <label>Slides</label>
-                      <button type="button" disabled={slides.length >= 10} onClick={() => setSlides([...slides, { headline: 'New idea', body: 'Add one focused takeaway.' }])}>
-                        <i className="ph ph-plus" /> Add slide
-                      </button>
+                      <div className="linkedin-composer__slide-actions">
+                        <button type="button" disabled={!slides.length || generatingAllSlides || generatingSlide !== null} onClick={generateAllSlideImages}>
+                          <i className={`ph ${generatingAllSlides ? 'ph-spinner linkedin-spin' : 'ph-images'}`} />
+                          {generatingAllSlides ? `Generating ${generatingSlide !== null ? generatingSlide + 1 : 1}/${slides.length}` : 'Generate all images'}
+                        </button>
+                        <button type="button" disabled={slides.length >= 10 || generatingAllSlides} onClick={() => setSlides([...slides, { headline: 'New idea', body: 'Add one focused takeaway.' }])}>
+                          <i className="ph ph-plus" /> Add slide
+                        </button>
+                      </div>
                     </div>
                     {slides.length < 2 && <p className="linkedin-composer__hint">Generate a slide plan or add at least two slides.</p>}
                     {slides.map((slide, index) => (
@@ -376,7 +434,7 @@ export default function LinkedInComposer({
                           <input value={slide.imagePrompt || ''} maxLength={1000} onChange={(event) => updateSlide(index, 'imagePrompt', event.target.value)} aria-label={`Slide ${index + 1} visual direction`} placeholder="Visual direction for AI (optional)" />
                           <div className="linkedin-slide-editor__media">
                             {slide.imagePreview && <img src={slide.imagePreview} alt={slide.altText || `Slide ${index + 1} visual`} />}
-                            <button type="button" onClick={() => generateSlideImage(index)} disabled={generatingSlide !== null}>
+                            <button type="button" onClick={() => generateSlideImage(index)} disabled={generatingSlide !== null || generatingAllSlides}>
                               <i className={`ph ${generatingSlide === index ? 'ph-spinner linkedin-spin' : 'ph-magic-wand'}`} />
                               {slide.imageFile ? 'Regenerate' : 'Generate image'}
                             </button>

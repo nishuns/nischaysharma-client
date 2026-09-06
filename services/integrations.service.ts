@@ -81,7 +81,7 @@ export const integrationsService = {
   /**
    * Generate an AI-powered social media post
    */
-  generateAIPost: (data: { title: string; description?: string; type: 'article' | 'book'; format: LinkedInPostFormat }, token: string) => {
+  generateAIPost: (data: { title: string; description?: string; sourceContent?: string; type: 'article' | 'book'; format: LinkedInPostFormat }, token: string) => {
     return apiFetch<{ success: boolean; data: LinkedInPostPlan }>('/integrations/ai-post', {
       method: 'POST',
       token,
@@ -100,6 +100,7 @@ export const integrationsService = {
     slideHeadline?: string;
     slideBody?: string;
     imagePrompt?: string;
+    sourceContent?: string;
   }, token: string) => {
     return apiFetch<{ success: boolean; data: { url: string; mimeType: string } }>('/integrations/ai-post/image', {
       method: 'POST',

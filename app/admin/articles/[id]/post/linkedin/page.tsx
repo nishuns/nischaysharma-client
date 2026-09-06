@@ -69,6 +69,7 @@ export default function LinkedInArticlePostPage() {
         type="article"
         sourcePath={`/articles/${article.slug}`}
         initialImageUrl={article.backgroundImage}
+        sourceContent={article.content}
       />
     </div>
   );
