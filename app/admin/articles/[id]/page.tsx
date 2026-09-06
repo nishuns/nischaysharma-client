@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import { articlesService } from '@/services/articles.service';
 import { Article } from '@/lib/types/article';
@@ -12,10 +13,8 @@ import Image from 'next/image';
 import ArticlesLoading from '@/app/admin/articles/loading';
 import { toast } from 'sonner';
 import { useDialogStore } from '@/store/useDialogStore';
-import { integrationsService, IntegrationsList } from '@/services/integrations.service';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarkdownView from '@/components/ui/MarkdownView';
-import LinkedInComposer from '@/components/admin/LinkedInComposer';
 
 export default function ArticleEditPage() {
   const { id } = useParams() as { id: string };
@@ -26,7 +25,6 @@ export default function ArticleEditPage() {
   const [publishing, setPublishing] = useState(false);
   const [isRegeneratingBackground, setIsRegeneratingBackground] = useState(false);
   const [regenerationJobId, setRegenerationJobId] = useState<string | null>(null);
-  const [integrations, setIntegrations] = useState<IntegrationsList>({});
   const [error, setError] = useState('');
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
@@ -38,19 +36,7 @@ export default function ArticleEditPage() {
 
   useEffect(() => {
     fetchArticle();
-    fetchIntegrations();
   }, [id]);
-
-  const fetchIntegrations = async () => {
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) return;
-      const res = await integrationsService.list(token);
-      if (res.success) setIntegrations(res.data);
-    } catch (err) {
-      console.error('Error fetching integrations:', err);
-    }
-  };
 
   const fetchArticle = async () => {
     try {
@@ -262,14 +248,11 @@ export default function ArticleEditPage() {
                   <div className="card card--padded">
                     <h3 className="label" style={{ marginBottom: '1.5rem' }}>Social Distribution</h3>
                     
-                    <LinkedInComposer
-                      connected={Boolean(integrations.linkedin?.connected)}
-                      title={title}
-                      description={description}
-                      type="article"
-                      sourcePath={`/articles/${article.slug}`}
-                      initialImageUrl={backgroundImage}
-                    />
+                    <Link className="linkedin-launcher" href={`/admin/articles/${id}/post/linkedin`}>
+                      <span className="linkedin-launcher__icon"><i className="ph ph-linkedin-logo" /></span>
+                      <span><strong>Create LinkedIn post</strong><small>Open the dedicated publishing studio</small></span>
+                      <i className="ph ph-arrow-right" />
+                    </Link>
                   </div>
                 )}
 

@@ -18,6 +18,8 @@ interface LinkedInComposerProps {
   type: 'article' | 'book';
   sourcePath: string;
   initialImageUrl?: string;
+  mode?: 'modal' | 'page';
+  backHref?: string;
 }
 
 const formatOptions: { value: LinkedInPostFormat; label: string; icon: string; detail: string }[] = [
@@ -38,8 +40,11 @@ export default function LinkedInComposer({
   description = '',
   type,
   sourcePath,
-  initialImageUrl = ''
+  initialImageUrl = '',
+  mode = 'modal',
+  backHref = '/admin/articles'
 }: LinkedInComposerProps) {
+  const isPage = mode === 'page';
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<LinkedInPostFormat>('document');
   const [commentary, setCommentary] = useState(`I just published “${title}”.\n\n${description}`.trim());
@@ -59,11 +64,11 @@ export default function LinkedInComposer({
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isPage) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previousOverflow; };
-  }, [open]);
+  }, [isPage, open]);
 
   useEffect(() => {
     return () => {
@@ -277,30 +282,29 @@ export default function LinkedInComposer({
 
   if (!connected) {
     return (
-      <p className="linkedin-launcher__empty">
-        Connect LinkedIn in <Link href="/admin/profile">Profile Settings</Link> to publish posts.
-      </p>
+      <div className={isPage ? 'linkedin-connection-required' : undefined}>
+        {isPage && <i className="ph ph-linkedin-logo" />}
+        {isPage && <h2>Connect LinkedIn to start publishing</h2>}
+        <p className="linkedin-launcher__empty">
+          Connect LinkedIn in <Link href="/admin/profile">Profile Settings</Link> to publish posts.
+        </p>
+        {isPage && <Link className="btn btn--primary" href="/admin/profile">Open Profile Settings</Link>}
+      </div>
     );
   }
 
-  return (
-    <>
-      <button className="linkedin-launcher" type="button" onClick={() => setOpen(true)}>
-        <span className="linkedin-launcher__icon"><i className="ph ph-linkedin-logo" /></span>
-        <span><strong>Create LinkedIn post</strong><small>Text, image, or swipeable slides</small></span>
-        <i className="ph ph-arrow-up-right" />
-      </button>
-
-      {open && portalReady && createPortal((
-        <div className="linkedin-composer" role="dialog" aria-modal="true" aria-label="LinkedIn post studio">
-          <button className="linkedin-composer__backdrop" type="button" aria-label="Close" onClick={() => setOpen(false)} />
+  const composerContent = (
+        <div className={`linkedin-composer ${isPage ? 'linkedin-composer--page' : ''}`} role={isPage ? undefined : 'dialog'} aria-modal={isPage ? undefined : true} aria-label="LinkedIn post studio">
+          {!isPage && <button className="linkedin-composer__backdrop" type="button" aria-label="Close" onClick={() => setOpen(false)} />}
           <section className="linkedin-composer__panel">
             <header className="linkedin-composer__header">
               <div>
                 <span className="linkedin-composer__eyebrow">LinkedIn Studio</span>
                 <h2>Turn this {type} into a post</h2>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close composer"><i className="ph ph-x" /></button>
+              {isPage
+                ? <Link href={backHref} aria-label="Back to article"><i className="ph ph-arrow-left" /></Link>
+                : <button type="button" onClick={() => setOpen(false)} aria-label="Close composer"><i className="ph ph-x" /></button>}
             </header>
 
             <div className="linkedin-composer__formats" role="tablist" aria-label="Post format">
@@ -436,7 +440,18 @@ export default function LinkedInComposer({
             </footer>
           </section>
         </div>
-      ), document.body)}
+  );
+
+  return (
+    <>
+      {!isPage && (
+        <button className="linkedin-launcher" type="button" onClick={() => setOpen(true)}>
+          <span className="linkedin-launcher__icon"><i className="ph ph-linkedin-logo" /></span>
+          <span><strong>Create LinkedIn post</strong><small>Text, image, or swipeable slides</small></span>
+          <i className="ph ph-arrow-up-right" />
+        </button>
+      )}
+      {isPage ? composerContent : open && portalReady && createPortal(composerContent, document.body)}
     </>
   );
 }
