@@ -2,6 +2,7 @@ import { apiFetch } from './apiClient';
 
 export interface Integration {
   connected: boolean;
+  requiresReconnect?: boolean;
   accountName?: string;
   username?: string;
   urn?: string;
@@ -12,6 +13,27 @@ export interface Integration {
 export interface IntegrationsList {
   github?: Integration;
   linkedin?: Integration;
+}
+
+export type LinkedInPostFormat = 'text' | 'image' | 'document';
+
+export interface LinkedInSlide {
+  headline: string;
+  body: string;
+  altText?: string;
+  imagePrompt?: string;
+  imageUrl?: string;
+  imageFile?: File;
+  imagePreview?: string;
+}
+
+export interface LinkedInPostPlan {
+  format: LinkedInPostFormat;
+  commentary: string;
+  text: string;
+  slides: LinkedInSlide[];
+  imageAltText?: string;
+  hashtags?: string[];
 }
 
 export const integrationsService = {
@@ -59,8 +81,28 @@ export const integrationsService = {
   /**
    * Generate an AI-powered social media post
    */
-  generateAIPost: (data: { title: string; description?: string; type: 'article' | 'book' }, token: string) => {
-    return apiFetch<{ success: boolean; data: any }>('/integrations/ai-post', {
+  generateAIPost: (data: { title: string; description?: string; sourceContent?: string; type: 'article' | 'book'; format: LinkedInPostFormat }, token: string) => {
+    return apiFetch<{ success: boolean; data: LinkedInPostPlan }>('/integrations/ai-post', {
+      method: 'POST',
+      token,
+      body: data
+    });
+  },
+
+  /**
+   * Generate and store a portrait image for a LinkedIn image post.
+   */
+  generateLinkedInImage: (data: {
+    title: string;
+    description?: string;
+    type: 'article' | 'book';
+    purpose?: 'post' | 'slide';
+    slideHeadline?: string;
+    slideBody?: string;
+    imagePrompt?: string;
+    sourceContent?: string;
+  }, token: string) => {
+    return apiFetch<{ success: boolean; data: { url: string; mimeType: string } }>('/integrations/ai-post/image', {
       method: 'POST',
       token,
       body: data
@@ -108,6 +150,45 @@ export const integrationsService = {
       method: 'POST',
       token,
       body: data
+    });
+  },
+
+  publishLinkedInPost: (data: {
+    commentary: string;
+    format: LinkedInPostFormat;
+    title: string;
+    url?: string;
+    altText?: string;
+    generatedImageUrl?: string;
+    slides?: LinkedInSlide[];
+    media?: File;
+  }, token: string) => {
+    const body = new FormData();
+    body.set('commentary', data.commentary);
+    body.set('format', data.format);
+    body.set('title', data.title);
+    if (data.url) body.set('url', data.url);
+    if (data.altText) body.set('altText', data.altText);
+    if (data.generatedImageUrl) body.set('generatedImageUrl', data.generatedImageUrl);
+    if (data.slides) {
+      const imageIndexes: number[] = [];
+      const serializableSlides = data.slides.map((slide, index) => {
+        if (slide.imageFile) {
+          body.append('slideImages', slide.imageFile);
+          imageIndexes.push(index);
+        }
+        const { imageFile: _imageFile, imagePreview: _imagePreview, ...serializable } = slide;
+        return serializable;
+      });
+      body.set('slides', JSON.stringify(serializableSlides));
+      body.set('slideImageIndexes', JSON.stringify(imageIndexes));
+    }
+    if (data.media) body.set('media', data.media);
+
+    return apiFetch<{ success: boolean; data: { id?: string } }>('/integrations/linkedin/post', {
+      method: 'POST',
+      token,
+      body
     });
   }
 };
