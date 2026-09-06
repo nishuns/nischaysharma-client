@@ -22,6 +22,7 @@ export interface LinkedInSlide {
   body: string;
   altText?: string;
   imagePrompt?: string;
+  imageUrl?: string;
   imageFile?: File;
   imagePreview?: string;
 }
@@ -157,6 +158,7 @@ export const integrationsService = {
     title: string;
     url?: string;
     altText?: string;
+    generatedImageUrl?: string;
     slides?: LinkedInSlide[];
     media?: File;
   }, token: string) => {
@@ -166,6 +168,7 @@ export const integrationsService = {
     body.set('title', data.title);
     if (data.url) body.set('url', data.url);
     if (data.altText) body.set('altText', data.altText);
+    if (data.generatedImageUrl) body.set('generatedImageUrl', data.generatedImageUrl);
     if (data.slides) {
       const imageIndexes: number[] = [];
       const serializableSlides = data.slides.map((slide, index) => {

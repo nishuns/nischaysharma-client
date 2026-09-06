@@ -52,6 +52,7 @@ export default function LinkedInComposer({
   const [altText, setAltText] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState(initialImageUrl);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatingSlide, setGeneratingSlide] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -78,22 +79,18 @@ export default function LinkedInComposer({
 
   const canPublish = useMemo(() => {
     if (!commentary.trim()) return false;
-    if (format === 'image') return Boolean(imageFile || initialImageUrl);
+    if (format === 'image') return Boolean(imageFile || generatedImageUrl || initialImageUrl);
     if (format === 'document') {
       return slides.length >= 2 && slides.every((slide) => slide.headline.trim() && slide.body.trim());
     }
     return true;
-  }, [commentary, format, imageFile, initialImageUrl, slides]);
+  }, [commentary, format, generatedImageUrl, imageFile, initialImageUrl, slides]);
 
-  const applyGeneratedImage = async (url: string, mimeType: string) => {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('The generated image could not be downloaded');
-    const blob = await response.blob();
-    const resolvedType = blob.type || mimeType || 'image/png';
-    const extension = resolvedType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
-    const file = new File([blob], `linkedin-visual.${extension}`, { type: resolvedType });
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  const applyGeneratedImage = (url: string) => {
+    if (!url) throw new Error('The image service did not return a preview URL');
+    setImageFile(null);
+    setGeneratedImageUrl(url);
+    setImagePreview(url);
   };
 
   const generateImage = async (token?: string) => {
@@ -101,7 +98,7 @@ export default function LinkedInComposer({
     if (!authToken) throw new Error('No authentication token');
     const response = await integrationsService.generateLinkedInImage({ title, description, type }, authToken);
     if (!response.success) throw new Error('Image generation failed');
-    await applyGeneratedImage(response.data.url, response.data.mimeType);
+    applyGeneratedImage(response.data.url);
   };
 
   const generate = async () => {
@@ -149,6 +146,7 @@ export default function LinkedInComposer({
       return;
     }
     setImageFile(file);
+    setGeneratedImageUrl('');
     setImagePreview(URL.createObjectURL(file));
   };
 
@@ -176,7 +174,7 @@ export default function LinkedInComposer({
     const jpeg = await convertToSlideJpeg(file);
     const preview = URL.createObjectURL(jpeg);
     setSlides((current) => current.map((slide, slideIndex) => (
-      slideIndex === index ? { ...slide, imageFile: jpeg, imagePreview: preview } : slide
+      slideIndex === index ? { ...slide, imageFile: jpeg, imageUrl: undefined, imagePreview: preview } : slide
     )));
   };
 
@@ -205,10 +203,11 @@ export default function LinkedInComposer({
         slideBody: slide.body,
         imagePrompt: slide.imagePrompt
       }, token);
-      const imageResponse = await fetch(response.data.url);
-      if (!imageResponse.ok) throw new Error('The generated slide image could not be downloaded');
-      const blob = await imageResponse.blob();
-      await setSlideImage(index, new File([blob], 'generated-slide-image', { type: blob.type || response.data.mimeType }));
+      setSlides((current) => current.map((currentSlide, slideIndex) => (
+        slideIndex === index
+          ? { ...currentSlide, imageFile: undefined, imageUrl: response.data.url, imagePreview: response.data.url }
+          : currentSlide
+      )));
       toast.success(`Slide ${index + 1} image generated`);
     } catch (error) {
       toast.error(`Slide image generation failed: ${(error as Error).message}`);
@@ -217,22 +216,16 @@ export default function LinkedInComposer({
     }
   };
 
-  const loadCurrentCover = async () => {
-    if (!initialImageUrl) throw new Error('This content does not have a cover image');
-    const response = await fetch(initialImageUrl);
-    if (!response.ok) throw new Error('The current cover could not be downloaded; upload it manually instead');
-    const blob = await response.blob();
-    if (!blob.type.startsWith('image/')) throw new Error('The current cover is not a supported image');
-    return new File([blob], 'content-cover', { type: blob.type });
-  };
-
   const publish = async () => {
     if (!canPublish) return;
     try {
       setPublishing(true);
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
-      const media = format === 'image' ? (imageFile || await loadCurrentCover()) : undefined;
+      const media = format === 'image' ? imageFile || undefined : undefined;
+      const remoteImageUrl = format === 'image' && !imageFile
+        ? generatedImageUrl || initialImageUrl
+        : undefined;
       const url = `${window.location.origin}${sourcePath}`;
       const response = await integrationsService.publishLinkedInPost({
         commentary: commentary.trim(),
@@ -240,6 +233,7 @@ export default function LinkedInComposer({
         title,
         url,
         altText,
+        generatedImageUrl: remoteImageUrl,
         slides: format === 'document' ? slides : undefined,
         media
       }, token);
