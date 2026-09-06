@@ -26,6 +26,12 @@ const formatOptions: { value: LinkedInPostFormat; label: string; icon: string; d
   { value: 'document', label: 'Slides', icon: 'ph-cards-three', detail: 'Swipeable PDF' }
 ];
 
+const generationLabels: Record<LinkedInPostFormat, string> = {
+  text: 'Generate copy',
+  image: 'Generate copy & image',
+  document: 'Generate slides'
+};
+
 export default function LinkedInComposer({
   connected,
   title,
@@ -71,20 +77,54 @@ export default function LinkedInComposer({
     return true;
   }, [commentary, format, imageFile, initialImageUrl, slides]);
 
+  const applyGeneratedImage = async (url: string, mimeType: string) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('The generated image could not be downloaded');
+    const blob = await response.blob();
+    const resolvedType = blob.type || mimeType || 'image/png';
+    const extension = resolvedType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+    const file = new File([blob], `linkedin-visual.${extension}`, { type: resolvedType });
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const generateImage = async (token?: string) => {
+    const authToken = token || await auth.currentUser?.getIdToken();
+    if (!authToken) throw new Error('No authentication token');
+    const response = await integrationsService.generateLinkedInImage({ title, description, type }, authToken);
+    if (!response.success) throw new Error('Image generation failed');
+    await applyGeneratedImage(response.data.url, response.data.mimeType);
+  };
+
   const generate = async () => {
     try {
       setGenerating(true);
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('No authentication token');
-      const response = await integrationsService.generateAIPost({ title, description, type, format }, token);
+      const [response] = await Promise.all([
+        integrationsService.generateAIPost({ title, description, type, format }, token),
+        ...(format === 'image' ? [generateImage(token)] : [])
+      ]);
       if (response.success) {
         setCommentary(response.data.commentary || response.data.text);
         setSlides(response.data.slides || []);
         setAltText(response.data.imageAltText || '');
-        toast.success(format === 'document' ? 'Slide plan generated' : 'LinkedIn copy generated');
+        toast.success(format === 'document' ? 'Editable slides generated' : format === 'image' ? 'LinkedIn copy and image generated' : 'LinkedIn copy generated');
       }
     } catch (error) {
       toast.error(`AI generation failed: ${(error as Error).message}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const generateImageOnly = async () => {
+    try {
+      setGenerating(true);
+      await generateImage();
+      toast.success('LinkedIn image generated');
+    } catch (error) {
+      toast.error(`Image generation failed: ${(error as Error).message}`);
     } finally {
       setGenerating(false);
     }
@@ -197,7 +237,7 @@ export default function LinkedInComposer({
                   <label htmlFor="linkedin-commentary">Post commentary</label>
                   <button type="button" onClick={generate} disabled={generating}>
                     <i className={`ph ${generating ? 'ph-spinner linkedin-spin' : 'ph-sparkle'}`} />
-                    {generating ? 'Generating…' : 'Generate with AI'}
+                    {generating ? 'Generating…' : generationLabels[format]}
                   </button>
                 </div>
                 <textarea
@@ -211,6 +251,10 @@ export default function LinkedInComposer({
 
                 {format === 'image' && (
                   <div className="linkedin-composer__media-editor">
+                    <button className="linkedin-composer__generate-image" type="button" onClick={generateImageOnly} disabled={generating}>
+                      <i className={`ph ${generating ? 'ph-spinner linkedin-spin' : 'ph-magic-wand'}`} />
+                      <span><strong>{imageFile ? 'Generate a new image' : 'Generate image with AI'}</strong><small>Creates a LinkedIn-ready 4:5 visual</small></span>
+                    </button>
                     <label className="linkedin-composer__upload">
                       <i className="ph ph-upload-simple" />
                       <span><strong>{imageFile ? imageFile.name : 'Choose an image'}</strong><small>PNG, JPG, GIF — up to 20 MB</small></span>

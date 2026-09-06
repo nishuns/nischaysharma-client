@@ -85,6 +85,17 @@ export const integrationsService = {
   },
 
   /**
+   * Generate and store a portrait image for a LinkedIn image post.
+   */
+  generateLinkedInImage: (data: { title: string; description?: string; type: 'article' | 'book' }, token: string) => {
+    return apiFetch<{ success: boolean; data: { url: string; mimeType: string } }>('/integrations/ai-post/image', {
+      method: 'POST',
+      token,
+      body: data
+    });
+  },
+
+  /**
    * Sync deep stats from a provider
    */
   syncStats: (provider: 'github' | 'linkedin', token: string) => {
